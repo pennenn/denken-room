@@ -23,25 +23,25 @@ claude.ai の旧アプリ →「設定」→ いちばん下の「データを�
 
 ### 1. GitHub に置いて公開する
 1. github.com で新しいリポジトリを作る（名前の例：`denken-room`、**Public**、README などは追加しない）
-2. PC で次を実行（`<ユーザー名>` は自分の GitHub ユーザー名）
+2. PC で次を実行
    ```bash
    cd C:/Users/penen/Documents/denken-room
    git init -b main
    git add .
    git commit -m "ボルコの電験ルーム"
-   git remote add origin https://github.com/<ユーザー名>/denken-room.git
+   git remote add origin https://github.com/pennenn/denken-room.git
    git push -u origin main
    ```
    初回はブラウザで GitHub へのログインを求められます。
 3. リポジトリの **Settings → Pages** で「Source: Deploy from a branch」「Branch: main / (root)」にして Save
-4. 数分後に `https://<ユーザー名>.github.io/denken-room/` で開けます（この時点では端末だけに保存するモード）
+4. 数分後に `https://pennenn.github.io/denken-room/` で開けます（この時点では端末だけに保存するモード）
 
 ### 2. Firebase を用意する
 [Firebase コンソール](https://console.firebase.google.com/) で：
 1. **プロジェクトを追加**（名前の例：`denken-room`。Google アナリティクスはオフで可）
 2. **プロジェクトの設定 → マイアプリ →「</>（ウェブ）」** でアプリを登録 → 表示された `firebaseConfig` の中身を `firebase-config.js` の `self.FIREBASE_CONFIG` に貼り付け
 3. **Authentication → 始める → Sign-in method → Google** を有効にする
-   - 同じ画面の **設定 → 承認済みドメイン** に `<ユーザー名>.github.io` を追加
+   - 同じ画面の **設定 → 承認済みドメイン** に `pennenn.github.io` を追加
 4. **Firestore Database → データベースの作成**（本番環境モード、ロケーション `asia-northeast1（東京）`）
    - **ルール** タブに `firestore.rules` の中身を貼り付けて「公開」
 5. **プロジェクトの設定 → Cloud Messaging → ウェブプッシュ証明書 →「鍵ペアを生成」** → 表示された鍵を `firebase-config.js` の `self.FCM_VAPID_KEY` に貼り付け
@@ -60,7 +60,7 @@ claude.ai の旧アプリ →「設定」→ いちばん下の「データを�
 3. ダウンロードした JSON ファイルは**リポジトリに入れず**、登録が済んだら PC から削除してください（この鍵があるとデータベースを操作できます）
 
 ### 4. 使い始める
-1. PC で `https://<ユーザー名>.github.io/denken-room/` を開き、**設定 →「Googleでログイン」**
+1. PC で `https://pennenn.github.io/denken-room/` を開き、**設定 →「Googleでログイン」**
 2. **設定 → データを読み込む（JSON）** で手順0のファイルを選ぶ
 3. Android の Chrome で同じURLを開き、同じ Google アカウントでログイン
 4. Chrome のメニュー（︙）→ **「アプリをインストール」**（または「ホーム画面に追加」）→ ホーム画面にボルコのアイコン
