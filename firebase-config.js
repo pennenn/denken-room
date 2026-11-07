@@ -1,12 +1,12 @@
-// Firebase コンソール →「プロジェクトの設定」→「マイアプリ（ウェブアプリ）」の firebaseConfig をここに貼り付けます。
+// Firebase コンソール →「プロジェクトの設定」→「マイアプリ（ウェブアプリ）」の firebaseConfig
 // この値は公開しても問題ない情報です（データはログインした本人しか読めないようにルールで守ります）。
 self.FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyA5kdCw9mGHNnJoLpvBVRVuVwXA5Bc4ydQ",
+  authDomain: "denken-room-d1ed7.firebaseapp.com",
+  projectId: "denken-room-d1ed7",
+  storageBucket: "denken-room-d1ed7.firebasestorage.app",
+  messagingSenderId: "248151471497",
+  appId: "1:248151471497:web:3b8308f52d236c1c039d58",
 };
 // Firebase コンソール →「プロジェクトの設定」→「Cloud Messaging」→「ウェブプッシュ証明書」の鍵ペア
 self.FCM_VAPID_KEY = "YOUR_VAPID_KEY";
