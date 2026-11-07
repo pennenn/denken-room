@@ -9,4 +9,4 @@ self.FIREBASE_CONFIG = {
   appId: "1:248151471497:web:3b8308f52d236c1c039d58",
 };
 // Firebase コンソール →「プロジェクトの設定」→「Cloud Messaging」→「ウェブプッシュ証明書」の鍵ペア
-self.FCM_VAPID_KEY = "YOUR_VAPID_KEY";
+self.FCM_VAPID_KEY = "BGNtTzL0XyV9KuxiNKXNJk6L_jkEvO-ORVU9KLypjQvHbqHVe6sJUv2HkvTohV21gzYTDEgwa-DJUO5G5v8c5T4";
