@@ -1,0 +1,1403 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ボルコの電験ルーム</title>
+<meta name="theme-color" content="#2A2140">
+<meta name="description" content="TAC 電験三種Webコースの予定・進捗・学習時間を、ドット絵のボルコと管理する学習アプリ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<script>window.cloudReady = new Promise(r => { window.__cloudResolve = r; });</script>
+<script src="firebase-config.js"></script>
+<script src="toc.js"></script>
+<script type="module" src="cloud.js"></script>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
+<style>
+/* Layout: 左（スマホでは上）にドット絵の部屋とキャラ、右（下）に単元・タイマー・記録。ゲーム画面風の単一テーマ。 */
+:root{
+  --bg1:#B9A8FF; --bg2:#FFC6E2; --bg3:#FFE7B3;
+  --panel:#FFFDF8; --panel2:#F2EDFF; --ink:#2A2140; --ink2:#4B3F72; --muted:#6F6590; --line:#DDD3F2;
+  --accent:#FF4F8B; --yellow:#FFD23F; --mint:#3FD6A0; --white:#FFFFFF;
+  --c-riron:#3D7BF0; --c-kikai:#14A06B; --c-denryoku:#EE8A00; --c-hoki:#9A5CF5;
+  --ok:#14A06B; --warn:#D97F00; --bad:#E2384F; --ok-soft:#D3F6E6; --warn-soft:#FFEDC7; --bad-soft:#FFDCE2;
+  --h0:#E9E3F8; --h1:#FFD0E1; --h2:#FF9DC0; --h3:#FF6E9E; --h4:#FF4F8B;
+  --f:"DotGothic16","MS Gothic","Osaka-Mono",monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{background:var(--bg1)}
+body{
+  background:linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%) fixed;
+  color:var(--ink); font-family:var(--f); font-size:15px; line-height:1.55; min-height:100vh;
+  -webkit-font-smoothing:none;
+}
+button,input,select{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:3px dashed var(--accent);outline-offset:3px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.82rem}
+h2,h3{margin:0;font-weight:400;text-wrap:balance;line-height:1.3}
+h2{font-size:1.15rem}
+
+/* ピクセル枠：角が欠けた3pxの縁取り */
+.px{background:var(--panel);box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink),0 9px 0 -3px rgba(42,33,64,.28);margin:3px}
+.px.alt{background:var(--panel2)}
+
+.app{max-width:1120px;margin:0 auto;padding-block:14px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.side{display:grid;gap:14px;min-width:0}
+.main{display:grid;gap:16px;min-width:0;align-content:start}
+
+/* タイトルバー */
+.titlebar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 10px;background:var(--ink);color:var(--white);box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink);margin:3px}
+.titlebar .t{display:flex;align-items:center;gap:8px;font-size:.95rem;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.titlebar .t svg{width:16px;height:16px;color:var(--yellow);flex:none}
+.tac{background:var(--yellow);color:var(--ink);text-decoration:none;padding:3px 10px;font-size:.85rem;white-space:nowrap;box-shadow:inset 0 -3px 0 0 rgba(0,0,0,.18)}
+.tac[aria-disabled="true"]{opacity:.45;pointer-events:none}
+
+/* HUD */
+.hud{display:flex;align-items:center;gap:10px}
+.lv{flex:none;width:52px;height:52px;border-radius:50%;background:var(--ink);color:var(--white);display:grid;place-items:center;line-height:1;box-shadow:0 0 0 3px var(--white),0 0 0 6px var(--ink);text-align:center}
+.lv span{font-size:.62rem;color:var(--yellow);display:block}
+.lv b{font-weight:400;font-size:1.25rem}
+.xp{flex:1;min-width:0}
+.xpbar{height:16px;background:var(--white);box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink);margin:3px;position:relative;overflow:hidden}
+.xpbar b{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--mint) 0 6px,#2FC28E 6px 8px);transition:width .6s steps(12)}
+.xp small{display:flex;justify-content:space-between;font-size:.72rem;color:var(--ink2);padding:0 4px}
+.pts{flex:none;display:flex;align-items:center;gap:6px;background:var(--ink);color:var(--white);padding:4px 12px 4px 8px;box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink);margin:3px}
+.pts svg{width:16px;height:16px;color:var(--yellow)}
+
+/* 部屋 */
+.scene{position:relative;padding:0;overflow:visible;background:#2A2140}
+.scene canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;aspect-ratio:192/128}
+.bubble{position:absolute;left:4%;right:30%;top:5%;background:var(--white);color:var(--ink);padding:8px 11px;font-size:.92rem;line-height:1.45;min-height:2.6em;box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink);pointer-events:none;transition:opacity .2s}
+.bubble::after{content:"";position:absolute;left:22%;bottom:-12px;width:12px;height:9px;background:var(--white);box-shadow:3px 0 0 0 var(--ink),-3px 0 0 0 var(--ink),0 3px 0 0 var(--ink);clip-path:polygon(-3px 0,calc(100% + 3px) 0,calc(100% + 3px) 100%,-3px 100%)}
+.bubble.hide{opacity:0}
+.bubble .who{display:block;font-size:.7rem;color:var(--accent)}
+.status{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{padding:7px 10px;text-align:center;min-width:0}
+.stat .l{font-size:.7rem;color:var(--muted);display:block}
+.stat .v{font-size:1.25rem;line-height:1.2}
+.stat .v small{font-size:.72rem;color:var(--muted)}
+.stat.alert .v{color:var(--bad)}
+.timerchip{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:var(--white);padding:6px 10px;box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink);margin:3px;cursor:pointer;border:0;width:calc(100% - 6px)}
+
+/* ナビ */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:10px max(14px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));background:rgba(42,33,64,.18);backdrop-filter:blur(6px)}
+.nbtn{border:0;background:var(--panel);color:var(--ink);display:grid;justify-items:center;gap:3px;padding:7px 2px 6px;cursor:pointer;font-size:.74rem;box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink),inset 0 -4px 0 0 var(--line);margin:3px}
+.nbtn svg{width:24px;height:24px}
+.nbtn[aria-current="page"]{background:var(--ink);color:var(--white);box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink),inset 0 -4px 0 0 #000}
+.nbtn[aria-current="page"] svg{color:var(--yellow)}
+.nbtn:active{transform:translateY(2px)}
+
+/* 汎用 */
+.panel{padding:14px 16px}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.head h2::before{content:"▶ ";color:var(--accent)}
+.btn{border:0;background:var(--ink);color:var(--white);padding:7px 14px;cursor:pointer;font-size:.88rem;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink),inset 0 -3px 0 0 #000;margin:3px}
+.btn:hover{background:var(--ink2)}
+.btn:active{transform:translateY(2px)}
+.btn.pink{background:var(--accent)} .btn.pink:hover{background:#ff3a7d}
+.btn.light{background:var(--panel);color:var(--ink);box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink),inset 0 -3px 0 0 var(--line)}
+.btn.armed{background:var(--bad)}
+.btn.tiny{padding:3px 9px;font-size:.78rem}
+.btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:0;background:var(--panel);color:var(--ink);padding:4px 11px;font-size:.84rem;cursor:pointer;box-shadow:0 -2px 0 0 var(--ink),0 2px 0 0 var(--ink),-2px 0 0 0 var(--ink),2px 0 0 0 var(--ink);margin:2px}
+.chip[aria-pressed="true"]{background:var(--sc,var(--accent));color:var(--white)}
+label.f{display:grid;gap:3px;font-size:.76rem;color:var(--muted);min-width:0}
+input[type=text],input[type=number],input[type=date],input[type=url],input[type=time]{width:100%;min-width:0;background:var(--white);border:0;padding:6px 8px;font-size:.9rem;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink2);border-radius:0}
+input:focus{outline:none;box-shadow:inset 0 0 0 3px var(--accent)}
+.pill{display:inline-block;font-size:.72rem;padding:0 7px;white-space:nowrap;box-shadow:0 0 0 2px currentColor;margin:0 2px}
+.pill.ok{color:var(--ok);background:var(--ok-soft)} .pill.warn{color:var(--warn);background:var(--warn-soft)} .pill.bad{color:var(--bad);background:var(--bad-soft)} .pill.n{color:var(--muted);background:var(--h0)}
+.empty{padding:12px;background:var(--panel2);font-size:.88rem;box-shadow:inset 0 0 0 2px var(--line)}
+.note{font-size:.82rem;background:#FFF4C2;padding:8px 11px;margin-top:12px;box-shadow:inset 0 0 0 2px var(--yellow)}
+
+/* 進捗 */
+.sp{display:grid;grid-template-columns:3.4em minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:7px 0;border-top:2px dotted var(--line)}
+.sp:first-of-type{border-top:0}
+.sp .nm{color:var(--sc)}
+.track{position:relative;height:14px;background:var(--white);box-shadow:0 -2px 0 0 var(--ink),0 2px 0 0 var(--ink),-2px 0 0 0 var(--ink),2px 0 0 0 var(--ink);margin:2px}
+.track b{position:absolute;left:0;top:0;bottom:0;background:repeating-linear-gradient(90deg,var(--sc) 0 7px,transparent 7px 8px)}
+.track .exp{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--accent)}
+.sp .st{font-size:.8rem;white-space:nowrap;text-align:right}
+.sp .meta{grid-column:2/4;font-size:.74rem;color:var(--muted)}
+
+.next{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.next li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 10px 8px 14px;background:var(--white);box-shadow:0 -2px 0 0 var(--ink),0 2px 0 0 var(--ink),-2px 0 0 0 var(--ink),2px 0 0 0 var(--ink),inset 6px 0 0 0 var(--sc);margin:2px}
+.next .ch{font-size:.74rem;color:var(--sc);grid-column:1/-1}
+.next .tt{min-width:0}
+.next .tt span{display:block;font-size:.78rem;color:var(--muted)}
+
+/* 単元 */
+.subjbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.flow{display:flex;flex-wrap:wrap;gap:6px;font-size:.74rem;color:var(--ink2);margin:10px 0 0;padding:0;list-style:none}
+.flow li{background:var(--panel2);padding:2px 8px}
+.chap{padding:12px 14px;display:grid;gap:10px;background:var(--white)}
+.chap.done{background:#EFFBF5}
+.chap.test{background:#FFF8DC}
+.chap .name{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.chap .code{background:var(--sc);color:var(--white);padding:0 6px;font-size:.78rem}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.step{border:0;background:var(--panel2);color:var(--ink);font-size:.76rem;cursor:pointer;padding:6px 4px;display:grid;justify-items:center;gap:4px;box-shadow:0 -2px 0 0 var(--ink),0 2px 0 0 var(--ink),-2px 0 0 0 var(--ink),2px 0 0 0 var(--ink);margin:2px;line-height:1.2}
+.step::before{content:"";width:14px;height:14px;background:var(--white);box-shadow:inset 0 0 0 2px var(--ink)}
+.step[aria-pressed="true"]{background:var(--sc);color:var(--white)}
+.step[aria-pressed="true"]::before{background:var(--yellow);box-shadow:inset 0 0 0 2px var(--ink),inset 0 0 0 4px var(--white)}
+.dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.row2{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.row2 .memo{flex:1 1 200px;min-width:0}
+.ustate .chip.weak[aria-pressed="true"]{background:var(--bad)} .ustate .chip.mid[aria-pressed="true"]{background:var(--warn)} .ustate .chip.good[aria-pressed="true"]{background:var(--ok)}
+.chaplist{display:grid;gap:12px}
+.step small{display:block;font-size:.66rem;opacity:.85}
+.secs{background:var(--panel2);padding:6px 10px;box-shadow:inset 0 0 0 2px var(--line)}
+.secs summary{cursor:pointer;font-size:.84rem;padding:4px 0;list-style:none}
+.secs summary::before{content:"▶ ";color:var(--accent)}
+.secs[open] summary::before{content:"▼ "}
+.seclist{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
+.sec{display:grid;grid-template-columns:minmax(0,1fr) 9.5em auto;gap:8px;align-items:center;padding:6px 8px;background:var(--white);font-size:.84rem}
+.sec.ok{background:#EFFBF5}
+.sec .sn b{font-weight:400;color:var(--sc)}
+.sec input[type=date]{padding:3px 5px;font-size:.78rem}
+.sb{display:flex;gap:4px}
+.step.mini{padding:3px 7px;grid-auto-flow:column;align-items:center;gap:4px;font-size:.72rem}
+.step.mini::before{width:10px;height:10px}
+.tocedit{display:grid;gap:8px;margin-top:6px}
+.tocedit textarea{width:100%;font:inherit;font-size:.85rem;padding:8px;border:0;box-shadow:inset 0 0 0 2px var(--ink2);background:var(--white);color:var(--ink);resize:vertical}
+.plprev{margin:12px 0 0;padding:8px 10px;font-size:.84rem;background:var(--panel2);box-shadow:inset 0 0 0 2px var(--line);line-height:1.8}
+.plconfirm{margin-top:12px;padding:10px 12px;background:#FFF4C2;box-shadow:inset 0 0 0 2px var(--yellow);font-size:.88rem}
+.plmsg{margin:10px 0 0;padding:7px 10px;font-size:.84rem}
+.plmsg.ok{background:var(--ok-soft);color:var(--ok);box-shadow:inset 0 0 0 2px var(--ok)}
+.plmsg.bad{background:var(--bad-soft);color:var(--bad);box-shadow:inset 0 0 0 2px var(--bad)}
+.quota{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.84rem;margin-bottom:10px;padding:6px 10px;background:#FFF4C2;box-shadow:inset 0 0 0 2px var(--yellow)}
+.quota b{font-weight:400;font-size:1.1rem;color:var(--accent)}
+@media (max-width:520px){.sec{grid-template-columns:minmax(0,1fr) auto}.sec .sn{grid-column:1/-1}}
+
+/* タイマー */
+.tface{font-size:clamp(3rem,14vw,5.2rem);text-align:center;line-height:1;letter-spacing:.04em;padding:18px 0 8px;font-variant-numeric:tabular-nums}
+.tbar{height:12px;background:var(--white);box-shadow:0 -2px 0 0 var(--ink),0 2px 0 0 var(--ink),-2px 0 0 0 var(--ink),2px 0 0 0 var(--ink);margin:4px 2px 16px}
+.tbar b{display:block;height:100%;background:var(--accent);transition:width .5s linear}
+.tctl{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:14px}
+.tsec{display:grid;gap:8px;margin-top:12px}
+.tsec .lbl{font-size:.76rem;color:var(--muted)}
+
+/* 記録 */
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,13px);grid-auto-columns:13px;gap:3px;overflow-x:auto;padding:3px}
+.heat i{background:var(--h0)}
+.heat i[data-l="1"]{background:var(--h1)} .heat i[data-l="2"]{background:var(--h2)} .heat i[data-l="3"]{background:var(--h3)} .heat i[data-l="4"]{background:var(--h4)}
+.heat i.today{box-shadow:0 0 0 2px var(--ink)}
+.legend{display:flex;gap:4px;align-items:center;font-size:.72rem;color:var(--muted);margin-top:6px}
+.legend i{width:11px;height:11px;display:inline-block}
+.loglist{list-style:none;margin:0;padding:0}
+.loglist li{display:grid;grid-template-columns:6.2em 3.4em minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:2px dotted var(--line);font-size:.86rem}
+.loglist li:first-child{border-top:0}
+.bars{display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:3.6em minmax(0,1fr) 4em;gap:10px;align-items:center;font-size:.84rem}
+.qlog{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.qlog .full{grid-column:1/-1}
+.mini{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+
+/* 設定 */
+.qrwrap{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:center}
+.qr{width:150px;aspect-ratio:1;max-width:100%;background:var(--white);box-shadow:0 -3px 0 0 var(--ink),0 3px 0 0 var(--ink),-3px 0 0 0 var(--ink),3px 0 0 0 var(--ink);margin:3px}
+.qr svg{display:block;width:100%;height:100%}
+.qrsteps{margin:0;padding-left:1.3em;font-size:.86rem;display:grid;gap:4px}
+.qrsteps b{font-weight:400;color:var(--accent)}
+.qrurl{display:flex;gap:8px;align-items:center;margin-top:12px}
+.qrurl input{flex:1;font-size:.78rem}
+@media (max-width:420px){.qrwrap{grid-template-columns:minmax(0,1fr);justify-items:center}}
+.sgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ssub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 0;border-top:2px dotted var(--line)}
+.ssub .nm{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;color:var(--sc)}
+.ssub .url{grid-column:1/-1}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--white);padding:8px 14px;font-size:.88rem;opacity:0;transition:.2s;pointer-events:none;z-index:30;box-shadow:0 0 0 3px var(--white),0 0 0 6px var(--ink);max-width:calc(100% - 40px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (min-width:920px){
+  .app{grid-template-columns:440px minmax(0,1fr);padding-bottom:40px;align-items:start}
+  .side{position:sticky;top:14px}
+  .nav{position:static;background:none;backdrop-filter:none;padding:0}
+  .toast{bottom:30px}
+}
+@media (max-width:420px){
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .loglist li{grid-template-columns:5.6em 3em minmax(0,1fr) auto;gap:6px}
+  .bubble{font-size:.84rem;right:24%}
+  .sgrid{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <aside class="side">
+    <div class="titlebar">
+      <span class="t"><svg id="ic-bolt-t" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true"></svg>ボルコの電験ルーム</span>
+      <a class="tac" id="tacTop" href="#" target="_blank" rel="noopener" aria-disabled="true">TAC ↗</a>
+    </div>
+    <div class="hud">
+      <div class="lv" aria-label="レベル"><div><span>Lv</span><b id="lv">1</b></div></div>
+      <div class="xp"><div class="xpbar"><b id="xpfill" style="width:0%"></b></div><small><span id="xpnext">次のレベルまで —</span><span id="save">読み込み中…</span></small></div>
+      <div class="pts" title="これまでに獲得したボルト（XP）"><svg id="ic-bolt" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true"></svg><b id="xp" class="num" style="font-weight:400">0</b></div>
+    </div>
+    <div class="scene px">
+      <canvas id="room" width="192" height="128" aria-label="ボルコの部屋。タップすると勉強のヒントを話します"></canvas>
+      <div class="bubble" id="bubble" aria-live="polite"><span class="who">ボルコ</span><span id="say"></span></div>
+    </div>
+    <div id="timerchip"></div>
+    <div class="status" id="status"></div>
+    <nav class="nav" id="nav" aria-label="メニュー"></nav>
+  </aside>
+  <main class="main" id="view"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+<script>
+(() => {
+"use strict";
+
+/* ================= 教材データ ================= */
+/* 『みんなが欲しかった！電験三種 ○○の教科書&問題集 第3版』（TAC出版）教科書編の目次（CHAPTER / SECTION） */
+const SUBJECTS = JSON.parse(JSON.stringify(self.DENKEN_TOC));
+SUBJECTS.forEach(s => { s.ch = s.ch.map(([n,secs]) => [n, secs.length, secs]); });
+const secCode = j => String(j+1).padStart(2,"0");
+/* 節リスト（ユーザーが編集した目次があればそちらを使う）: [{t:見出し, p:"12-25"}] */
+function secsOf(key, i){
+  const ov = state.toc && state.toc[key] && state.toc[key][chCode(i)];
+  return Array.isArray(ov) && ov.length ? ov : SUBJ[key].ch[i][2].map(t => ({t, p:""}));
+}
+const pageCount = p => { const m = String(p||"").match(/(\d+)\s*[-～~ー–]\s*(\d+)/); if (m) { const a=+m[1], b=+m[2]; return b>=a ? b-a+1 : 0; } return 0; };
+function secProg(c, j){ return c.sec[secCode(j)] || {b:false,q:false,plan:""}; }
+/* 単元の「教科書」「問題集」は節のチェックから決まる。全部そろうと修了日が入る */
+function syncChapter(key, i){
+  const c = state.progress[key].ch[chCode(i)], n = secsOf(key,i).length;
+  const ss = Array.from({length:n}, (_,j) => secProg(c,j));
+  c.s[0] = ss.every(x=>x.b); c.s[2] = ss.every(x=>x.q);
+  if (c.s.every(Boolean) && !c.done) { c.done = today(); return true; }
+  if (!c.s.every(Boolean) && c.done === today()) c.done = "";
+  return false;
+}
+const STEPS = ["教科書","中間ミニテスト","問題集A・B","総まとめ動画"];
+const SUBJ = Object.fromEntries(SUBJECTS.map(s=>[s.key,s]));
+const chCode = i => "CH" + String(i+1).padStart(2,"0");
+const TAC_TOP_DEFAULT = "";
+
+/* ================= 日付 ================= */
+const pad = n => String(n).padStart(2,"0");
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { if(!s) return null; const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+const today = () => fmt(new Date());
+const addDays = (s,n) => { const d = parse(s); d.setDate(d.getDate()+n); return fmt(d); };
+const addMonths = (s,n) => { const d = parse(s); d.setMonth(d.getMonth()+n); return fmt(d); };
+const diffDays = (a,b) => Math.round((parse(b)-parse(a))/86400000);
+const md = s => { if(!s) return "—"; const d=parse(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+const ymd = s => { if(!s) return "—"; const d=parse(s); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; };
+const weekStart = s => { const d = parse(s); d.setDate(d.getDate()-((d.getDay()+6)%7)); return fmt(d); };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl = u => /^https:\/\/[^\s"'<>]+$/i.test(u||"") ? u : "";
+const hm = min => { min = Math.round(min||0); const h = Math.floor(min/60), m = min%60; return h ? (m ? `${h}時間${m}分` : `${h}時間`) : `${m}分`; };
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e) { return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e) {} };
+
+/* ================= 状態 ================= */
+function defaultState(){
+  const t = today();
+  const st = {v:1, settings:{examDate:"", deadline:"", weeklyGoal:7, tacTop:TAC_TOP_DEFAULT, subjects:{}}, progress:{}, logs:[]};
+  SUBJECTS.forEach(s => { st.settings.subjects[s.key] = {start:t, end:addMonths(t,6), url:""}; });
+  return normalize(st);
+}
+function normalize(st){
+  st = st && typeof st === "object" ? JSON.parse(JSON.stringify(st)) : {};
+  const S = st.settings = st.settings || {};
+  S.examDate ??= ""; S.deadline ??= ""; S.weeklyGoal ??= 7; S.tacTop ??= TAC_TOP_DEFAULT; S.subjects ??= {};
+  st.progress ??= {}; st.logs = Array.isArray(st.logs) ? st.logs : [];
+  st.toc = st.toc && typeof st.toc === "object" ? st.toc : {};
+  SUBJECTS.forEach(s => {
+    S.subjects[s.key] ??= {start:today(), end:addMonths(today(),6), url:""};
+    const p = st.progress[s.key] ??= {}; p.ch ??= {};
+    s.ch.forEach((ch,i) => {
+      const c = p.ch[chCode(i)] ??= {};
+      c.plan ??= ""; c.done ??= ""; c.u ??= 0; c.memo ??= ""; c.mt ??= "";
+      c.s = Array.isArray(c.s) ? STEPS.map((_,k)=>!!c.s[k]) : STEPS.map(()=>false);
+      const firstTime = !c.sec || typeof c.sec !== "object";
+      c.sec = firstTime ? {} : c.sec;
+      const ov = st.toc[s.key] && st.toc[s.key][chCode(i)];
+      const n = Array.isArray(ov) && ov.length ? ov.length : ch[2].length;
+      for (let j=0;j<n;j++){ const x = c.sec[secCode(j)] ??= {}; x.b ??= firstTime ? !!c.s[0] : false; x.q ??= firstTime ? !!c.s[2] : false; x.plan ??= ""; }
+      Object.keys(c.sec).forEach(k => { if (!(+k >= 1 && +k <= n)) delete c.sec[k]; });
+    });
+    p.test ??= {}; p.test.plan ??= ""; p.test.done ??= ""; p.test.score ??= "";
+  });
+  return st;
+}
+let state = defaultState();
+const ui = {tab: lsGet("denken.tab") || "home", subj: lsGet("denken.subj") || "riron", logSub:"riron", logMin:60, armed:null, sound: lsGet("denken.sound") !== "off", open:{}, editToc:null};
+document.addEventListener("toggle", e => { const d = e.target; if (d.matches && d.matches("details.secs")) ui.open[d.dataset.k] = d.open; }, true);
+if (!SUBJ[ui.subj]) ui.subj = "riron";
+
+/* ================= 保存（自分専用の db 領域／使えなければこのブラウザ） ================= */
+const LKEY = "denken.state.v1";
+let ref = null, mode = "init", dirty = false, writing = false, saveT = null, loadT = null, loaded = false;
+function setSave(text){ document.getElementById("save").textContent = text; }
+function loadLocal(){ const raw = lsGet(LKEY); if (raw) { try { state = normalize(JSON.parse(raw)); } catch(e) {} } }
+function saveLocal(){ lsSet(LKEY, JSON.stringify(state)); }
+function commit(){
+  state.rev = Date.now();
+  dirty = true; saveLocal(); render(); checkLevel();
+  if (mode !== "cloud") return;
+  setSave("セーブ中…");
+  clearTimeout(saveT); saveT = setTimeout(flush, 700);
+}
+let unsub = null;
+async function flush(){
+  if (!ref || !window.cloudApi) return;
+  if (writing) { clearTimeout(saveT); saveT = setTimeout(flush, 400); return; }
+  writing = true; dirty = false;
+  try { await window.cloudApi.save(ref, JSON.parse(JSON.stringify(state))); setSave("セーブ済み"); }
+  catch(e){
+    console.error(e);
+    if (e && (e.code === "unavailable" || e.code === "deadline-exceeded")) { dirty = true; setTimeout(flush, 2000 + Math.random()*1000); setSave("再試行中…"); }
+    else setSave("端末にだけ保存");
+  }
+  finally { writing = false; if (dirty && mode === "cloud") { clearTimeout(saveT); saveT = setTimeout(flush, 400); } }
+}
+async function initStore(){
+  loadLocal(); render(); greet();
+  let cloud = null;
+  try { cloud = await Promise.race([window.cloudReady, new Promise(r => setTimeout(() => r(null), 10000))]); } catch(e) {}
+  window.cloudApi = cloud;
+  if (!cloud) { mode = "local"; ui.auth = "off"; setSave("端末に保存"); render(); return; }
+  ui.auth = "ready"; render();
+  cloud.onUser(u => {
+    if (unsub) { unsub(); unsub = null; }
+    ui.user = u;
+    if (!u) { mode = "local"; ref = null; setSave("未ログイン（端末に保存）"); render(); return; }
+    ref = u.uid; mode = "cloud"; setSave("ロード中…"); render();
+    clearTimeout(loadT); loadT = setTimeout(() => setSave("オフライン（端末に保存）"), 10000);
+    let first = true;
+    unsub = cloud.subscribe(u.uid, snap => {
+      if (!snap.fromCache) clearTimeout(loadT);
+      if (snap.exists) {
+        const remote = snap.state;
+        if (!dirty && !writing && !snap.pending) {
+          if ((+remote.rev || 0) >= (+state.rev || 0)) {
+            // クラウドの方が新しい（または同じ）ときだけ取り込む
+            state = normalize(remote); saveLocal(); render();
+            if (!loaded && !snap.fromCache) { loaded = true; checkLevel(true); greet(); }
+          } else if (!snap.fromCache) {
+            // 手元の方が新しい → クラウドへ送る
+            dirty = true; clearTimeout(saveT); saveT = setTimeout(flush, 300);
+          }
+        }
+      } else if (first && !snap.fromCache) {
+        // クラウドにまだデータがない → この端末のデータを送る
+        if (lsGet(LKEY)) { dirty = true; flush(); }
+      }
+      if (!snap.fromCache) { first = false; if (!dirty && !writing) setSave("セーブ済み"); }
+    }, err => { console.error(err); clearTimeout(loadT); setSave("同期エラー（端末に保存）"); });
+  });
+}
+
+/* ================= 集計 ================= */
+const isDone = c => !!c.done;
+function subjStats(key){
+  const s = SUBJ[key], p = state.progress[key], t = today();
+  const items = s.ch.map((_,i) => p.ch[chCode(i)]);
+  const done = items.filter(isDone).length, testDone = !!p.test.done, total = items.length + 1;
+  const doneAll = done + (testDone ? 1 : 0);
+  const planned = items.filter(c => c.plan).length;
+  const expected = items.filter(c => c.plan && c.plan <= t).length + (p.test.plan && p.test.plan <= t ? 1 : 0);
+  const lateList = s.ch.map((ch,i)=>({c:items[i], i})).filter(x => !isDone(x.c) && x.c.plan && x.c.plan < t);
+  const late = lateList.length + (!testDone && p.test.plan && p.test.plan < t ? 1 : 0);
+  const weak = items.map((c,i)=>({c,i})).filter(x=>x.c.u===1);
+  // 細かい進捗：節ごとに教科書・問題集、単元ごとにミニテスト・総まとめ動画、実力テストは4つ分
+  let unitDone = 0, unitAll = 0, secDue = 0, secWeek = 0;
+  s.ch.forEach((_,i) => { const c = items[i], n = secsOf(key,i).length;
+    for (let j=0;j<n;j++){ const x = secProg(c,j); unitAll += 2; unitDone += (x.b?1:0) + (x.q?1:0);
+      if (isDone(c) || (x.b && x.q) || !x.plan) continue;
+      if (x.plan <= t) secDue++; else if (x.plan <= addDays(t,6)) secWeek++; }
+    unitAll += 2; unitDone += (c.s[1]?1:0) + (c.s[3]?1:0); });
+  unitAll += 4; if (testDone) unitDone += 4;
+  return {done, doneAll, total, planned, expected, late, lateList, ratio: unitDone/unitAll, weak, testDone, secDue, secWeek};
+}
+function allTasks(){
+  const out = [];
+  SUBJECTS.forEach((s,si) => {
+    const p = state.progress[s.key];
+    s.ch.forEach((ch,i) => {
+      const c = p.ch[chCode(i)]; if (isDone(c)) return;
+      const secs = secsOf(s.key,i);
+      const j = secs.findIndex((_,jj) => { const x = secProg(c,jj); return !(x.b && x.q); });
+      if (j >= 0) { const x = secProg(c,j);
+        out.push({sub:s, code:`${chCode(i)}-${secCode(j)}`, chi:i, title:secs[j].t, sub2:ch[0], plan:x.plan || c.plan, step: !x.b ? `教科書を読む${secs[j].p?`（p.${secs[j].p}）`:""}` : "対応する問題集を解く", order: si*1000+i*20+j});
+      } else { const k = c.s.findIndex(x=>!x);
+        out.push({sub:s, code:chCode(i), chi:i, title:ch[0], sub2:"単元のしあげ", plan:c.plan, step: k<0 ? "修了日を記入" : STEPS[k] + (k===1 && c.mt ? `（${c.mt}）` : ""), order: si*1000+i*20+19}); }
+    });
+    if (!p.test.done && s.ch.every((_,i)=>isDone(p.ch[chCode(i)])))
+      out.push({sub:s, code:"課題", title:"実力テスト", plan:p.test.plan, step:"Webで解答（初回が成績）", order: si*100+99});
+  });
+  out.sort((a,b) => (a.plan||"9999") < (b.plan||"9999") ? -1 : (a.plan||"9999") > (b.plan||"9999") ? 1 : a.order-b.order);
+  return out;
+}
+const totalMin = () => state.logs.reduce((a,l)=>a+(+l.min||0),0);
+function minutesIn(from, to){ return state.logs.filter(l => l.d >= from && l.d <= to).reduce((a,l)=>a+(+l.min||0),0); }
+function streak(){
+  const by = {}; state.logs.forEach(l => { by[l.d] = (by[l.d]||0) + (+l.min||0); });
+  const t = today(); let n = 0;
+  for (let d = by[t] ? t : addDays(t,-1); by[d] > 0; d = addDays(d,-1)) n++;
+  return n;
+}
+function overall(){ return SUBJECTS.reduce((a,s)=>a+subjStats(s.key).ratio,0)/SUBJECTS.length; }
+
+/* XP：ステップ10・単元修了30・実力テスト150・学習3分ごとに1 */
+function xpTotal(){
+  let xp = 0;
+  SUBJECTS.forEach(s => { const p = state.progress[s.key];
+    s.ch.forEach((_,i) => { const c = p.ch[chCode(i)]; xp += ((c.s[1]?1:0)+(c.s[3]?1:0))*10 + (c.done?30:0);
+      Object.values(c.sec||{}).forEach(x => { xp += (x.b?5:0) + (x.q?5:0); }); });
+    if (p.test.done) xp += 150; });
+  return xp + Math.floor(totalMin()/3);
+}
+const lvOf = xp => Math.floor(Math.sqrt(xp/40)) + 1;
+const xpFor = lv => 40*(lv-1)*(lv-1);
+
+/* ================= 自動スケジュール ================= */
+function autoPlan(key){
+  const s = SUBJ[key], cfg = state.settings.subjects[key], p = state.progress[key];
+  if (!cfg.start || !cfg.end || cfg.end <= cfg.start) { toast(`${s.name}：開始日より後の目標日を入れてね`); return false; }
+  const span = diffDays(cfg.start, cfg.end);
+  const review = Math.min(21, Math.max(3, Math.round(span*0.12)));
+  const study = Math.max(1, span - review);
+  // 節ごとの重み：ページ範囲があればページ数、なければ平均。単元の最後にミニテスト・問題集しあげ分を足す
+  const known = []; s.ch.forEach((_,i) => secsOf(key,i).forEach(x => { const n = pageCount(x.p); if (n) known.push(n); }));
+  const avg = known.length ? known.reduce((a,b)=>a+b,0)/known.length : 1;
+  const units = [];
+  s.ch.forEach((_,i) => { const c = p.ch[chCode(i)];
+    secsOf(key,i).forEach((x,j) => units.push({w: pageCount(x.p) || avg, set: d => { const sp = c.sec[secCode(j)]; if (sp && !(sp.b && sp.q) && !isDone(c)) sp.plan = d; }}));
+    units.push({w: avg*0.6, set: d => { if (!isDone(c)) c.plan = d; }}); });
+  const total = units.reduce((a,u)=>a+u.w,0); let acc = 0;
+  units.forEach(u => { acc += u.w; u.set(addDays(cfg.start, Math.max(0, Math.round(study*acc/total)))); });
+  if (!p.test.done) p.test.plan = cfg.end;
+  return true;
+}
+
+/* ================= ドット絵 ================= */
+const PAL = {k:"#2A2140", s:"#FFDCC0", m:"#FF4F8B", c:"#8FD8FF", y:"#FFD23F"};
+/* ボルコ：黒髪ぱっつん＋ワインレッドのフリルヘッドドレス、黒×ワインのゴシックドレス（20×28px） */
+const CPAL = {k:"#1E1626", R:"#A3213F", q:"#D0405F", F:"#2B2530", G:"#3F3A48", g:"#5B5470", L:"#F4EEF7",
+  h:"#1F1B2B", H:"#4A4266", s:"#FFE6D8", S:"#F2BFA8", e:"#3A1E3F", i:"#8A4FB8", w:"#FFFFFF", c:"#FF9EB5", m:"#D6455F", y:"#FFD23F"};
+const face = f => ".khh" + f + "hhk.";
+const BASE = [
+  "......kkkkkkkk......",
+  "....kkRRqRRqRRkk....",
+  "...kRRqRRRRRRqRRk...",
+  "..kFRRRRRRRRRRRRFk..",
+  "..kFFkFFkFFkFFkFFk..",
+  ".kRhhhhhhhhhhhyhhRk.",
+  ".kRhhhhhhhhhhyhhhRk.",
+  ".khhhhhhhhhhhhhhhhk.",
+  ".khhhhshhhhhhshhhhk.",
+  face("ssssssssssss"),
+  face("skkksssskkks"),
+  face("sswesssswess"),
+  face("sseesssseess"),
+  face("cciissssiicc"),
+  face("kSsssmmsssSk"),
+  ".khhhkGGGGGGGGkhhhk.",
+  "..khkgGGqRRqGGgkhk..",
+  ".kgggkGGRRRRGGkgggk.",
+  ".kgggkGRkRRkRGkgggk.",
+  "..kLkkGGRkkRGGkkLk..",
+  "..kSkkGGGRRGGGkkSk..",
+  "..kFFGGGRGGRGGGFFk..",
+  ".kFGGGGRGGGGRGGGGFk.",
+  ".kRRqRRqRRqRRqRRqRk.",
+  "kFLFLFLFLFLFLFLFLFk.",
+  ".....kssk..kssk.....",
+  ".....kFFk..kFFk.....",
+  "....kkkkk..kkkkk....",
+].map((row,j) => (j>=6 && j<=12) ? "F" + row.slice(1,19) + "F" : row);
+const setAt = (row,i,ch) => row.slice(0,i) + ch + row.slice(i+1);
+const setMany = (row, idx, ch) => idx.reduce((r,i)=>setAt(r,i,ch), row);
+function spriteFor(mood, blink){
+  const r = BASE.slice();
+  const L = [6,7], Rt = [12,13];
+  const clear = (eyes) => { const lash = eyes===L?[5,6,7]:[12,13,14];
+    r[10] = setMany(r[10],lash,"s"); [11,12,13].forEach(j => r[j] = setMany(r[j],eyes,"s")); };
+  const caret = (eyes) => { clear(eyes); r[11] = setMany(r[11],eyes,"k"); r[12] = setMany(r[12],[eyes[0]-1,eyes[1]+1],"k"); };
+  const shut  = (eyes) => { clear(eyes); r[12] = setMany(r[12],[eyes[0]-1,...eyes,eyes[1]+1],"k"); };
+  if (mood === "happy" || mood === "cheer") { caret(L); caret(Rt); r[14] = setMany(r[14],[8,9,10,11],"m"); }
+  else if (mood === "wink") { caret(L); r[14] = setMany(r[14],[8,11],"m"); }
+  else if (mood === "sleepy") { shut(L); shut(Rt); r[14] = setAt(r[14],10,"s"); }
+  else if (mood === "worried") { r[14] = setMany(r[14],[9,10],"k"); if (blink) { shut(L); shut(Rt); } }
+  else if (blink) { shut(L); shut(Rt); }
+  if (mood === "cheer") { r[20] = setMany(r[20],[3,16],"g"); }
+  return r;
+}
+function drawRows(ctx, rows, x, y, sc, pal){
+  for (let j=0;j<rows.length;j++){ const row = rows[j];
+    for (let i=0;i<row.length;i++){ const ch = row[i]; if (ch === "." || ch === " ") continue;
+      ctx.fillStyle = pal[ch] || "#f0f"; ctx.fillRect(x+i*sc, y+j*sc, sc, sc); } }
+}
+const GLYPH = {
+  Z:["kkkk","..k.",".k..","kkkk"],
+  spark:["..y..","..y..","yy.yy","..y..","..y.."],
+  heart:[".m.m.","mmmmm","mmmmm",".mmm.","..m.."],
+  cup:["yyyyy","yyyyy",".yyy.","..y..",".yyy."],
+  cup0:["kkkkk","k...k",".k.k.","..k..",".kkk."],
+  drop:[".c.","ccc",".c."],
+};
+
+const cv = document.getElementById("room"), ctx = cv.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+const fx = {happyUntil:0, cheerUntil:0, winkUntil:0, parts:[], rain:false, studying:false};
+function R(x,y,w,h,c){ ctx.fillStyle = c; ctx.fillRect(x|0,y|0,w|0,h|0); }
+function line(x0,y0,x1,y1,c){ const n = Math.max(Math.abs(x1-x0),Math.abs(y1-y0))|0; for(let i=0;i<=n;i++){ R(Math.round(x0+(x1-x0)*i/n), Math.round(y0+(y1-y0)*i/n),1,1,c); } }
+function skyFor(h){
+  if (h < 5 || h >= 19) return {sky:["#1D1B45","#2C2766"], city:"#14112E", lit:true, stars:true, name:"night"};
+  if (h < 8) return {sky:["#FFC9A8","#FFE6B8"], city:"#7A6A9E", lit:false, name:"morning"};
+  if (h < 16) return {sky:["#7FCBFF","#C4ECFF"], city:"#8A9CC8", lit:false, name:"day"};
+  return {sky:["#FF8E7A","#FFC48A"], city:"#6A4F86", lit:true, name:"evening"};
+}
+function drawRoom(t){
+  const H = new Date().getHours(), sky = skyFor(H), night = sky.name === "night";
+  // 壁と床
+  R(0,0,192,96, night ? "#D9C9E8" : "#F3E3CC");
+  for (let x=0;x<192;x+=8) R(x,0,1,70, night ? "#CDBBDF" : "#EAD6BA");
+  R(0,70,192,26, night ? "#B79FCB" : "#D9BB93"); R(0,70,192,2,"#8F6A4A");
+  R(0,96,192,32,"#B47A4C");
+  for (let y=96;y<128;y+=6){ R(0,y,192,1,"#93603A"); for (let x=((y/6)%2)*14;x<192;x+=28) R(x,y,1,6,"#93603A"); }
+  R(0,96,192,1,"#6E4529");
+  // ラグ
+  R(26,110,70,12,"#E86A92"); R(28,112,66,8,"#F59BB6"); for(let x=30;x<92;x+=6) R(x,115,3,2,"#E86A92");
+  // 窓
+  R(6,10,56,44,"#6E4529"); R(9,13,50,38,sky.sky[0]); R(9,32,50,19,sky.sky[1]);
+  if (sky.stars) [[14,17],[26,21],[44,15],[52,24],[35,27],[19,29]].forEach(([x,y],i)=>{ if (((t/600)+i)%3 > .6) R(x,y,1,1,"#FFF6C8"); });
+  if (night) { R(47,16,5,5,"#FFF3B0"); R(49,16,3,3,sky.sky[0]); } else if (sky.name==="day") { R(46,16,6,6,"#FFF27A"); }
+  const city = [[9,40,7],[16,34,6],[22,42,5],[27,30,8],[35,38,6],[41,33,7],[48,41,5],[53,36,6]];
+  city.forEach(([x,y,w]) => { R(x,y,w,51-y,sky.city); if (sky.lit) for(let yy=y+2;yy<49;yy+=3) for(let xx=x+1;xx<x+w-1;xx+=2) if (((xx*7+yy*13)%5)===0) R(xx,yy,1,1,"#FFE27A"); });
+  // 鉄塔（送電線）
+  R(30,24,1,8,sky.city); line(26,26,34,26,sky.city); line(27,29,33,29,sky.city);
+  if (fx.rain) for (let i=0;i<14;i++){ const x = 10 + ((i*37 + t/18)|0)%48, y = 13 + ((i*23 + t/9)|0)%34; R(x,y,1,3,"#BFE3FF"); }
+  R(33,13,2,38,"#6E4529"); R(9,31,50,2,"#6E4529"); R(4,53,60,3,"#8F6A4A");
+  // 電圧計（全体進捗）
+  const p = overall();
+  R(70,12,30,24,"#2A2140"); R(72,14,26,20,"#FFF8E6");
+  for (let a=0;a<=8;a++){ const ang = Math.PI*(1-a/8); R(85+Math.cos(ang)*10, 30-Math.sin(ang)*10, 1,1, a>6?"#E2384F":"#2A2140"); }
+  const ang = Math.PI*(1-p) + Math.sin(t/500)*0.02;
+  line(85,30,85+Math.cos(ang)*9,30-Math.sin(ang)*9,"#E2384F"); R(84,29,3,3,"#2A2140");
+  R(74,31,3,1,"#3D7BF0"); R(93,31,3,1,"#3D7BF0");
+  // カレンダー（試験日）
+  R(106,12,18,20,"#2A2140"); R(107,13,16,18,"#FFFFFF"); R(107,13,16,4,"#FF4F8B");
+  const ex = state.settings.examDate ? diffDays(today(), state.settings.examDate) : null;
+  if (ex !== null && ex >= 0) { const s = String(Math.min(ex,999)); drawDigits(s, 115 - s.length*2, 20, "#2A2140"); }
+  else { R(110,21,10,1,"#BBB"); R(110,24,10,1,"#BBB"); R(110,27,6,1,"#BBB"); }
+  // 本棚
+  R(150,24,38,74,"#7A4E2E"); R(152,26,34,70,"#5E3A22");
+  [46,68].forEach(y => R(152,y,34,3,"#7A4E2E"));
+  SUBJECTS.forEach((s,i) => {
+    const st = subjStats(s.key), x = 155 + i*8, h = 17, fill = Math.round(h*st.ratio);
+    R(x,29,6,h,"#CFC6E0"); R(x,29+h-fill,6,fill,s.color); R(x,29,6,1,"#2A2140"); R(x+1,32,4,1,"rgba(255,255,255,.6)");
+    drawRows(ctx, st.testDone ? GLYPH.cup : GLYPH.cup0, x, 59, 1, {y:"#FFD23F", k:"#A08BBF"});
+  });
+  for (let i=0;i<3;i++) R(156+i*9,82,7,13,["#FFD23F","#8FD8FF","#FF9DB0"][i]);
+  // 机
+  R(84,74,62,5,"#A86A3E"); R(84,74,62,1,"#C98A58"); R(87,79,4,20,"#7A4E2E"); R(139,79,4,20,"#7A4E2E");
+  // 電卓（開平機能付き）
+  R(88,64,10,10,"#4B3F72"); R(89,65,8,3,"#B8F0C8"); for(let yy=69;yy<73;yy+=2) for(let xx=89;xx<97;xx+=2) R(xx,yy,1,1,"#FFFFFF");
+  // ノート
+  R(101,68,18,6,"#FFFFFF"); R(110,68,1,6,"#CFC6E0"); for(let yy=70;yy<74;yy+=2){ R(103,yy,6,1,"#B9C8F5"); R(112,yy,6,1,"#B9C8F5"); }
+  line(116,66,121,71,"#FFD23F"); R(121,71,1,1,"#2A2140");
+  // 植物（連続学習で育つ）
+  const sk = streak(), stage = sk>=7?5:sk>=5?4:sk>=3?3:sk>=2?2:sk>=1?1:0;
+  R(124,68,8,6,"#C8643F"); R(123,67,10,2,"#E07C55");
+  if (stage===0) { R(127,66,2,1,"#7AC74F"); }
+  else { const hgt = [0,3,5,7,9,11][stage]; R(127,67-hgt,2,hgt,"#3E9B4F");
+    for (let k=1;k<=stage;k++){ const yy = 67 - k*2; R(k%2?129:124,yy,3,2,"#7AC74F"); }
+    if (stage===5) { R(126,53,4,3,"#FF4F8B"); R(127,52,2,1,"#FFD23F"); } }
+  // ランプ
+  const lampOn = fx.studying || night;
+  R(136,72,8,2,"#2A2140"); R(139,58,2,14,"#2A2140"); R(134,55,10,4,lampOn?"#FFD23F":"#8B83A8"); R(133,58,12,1,"#2A2140");
+  if (lampOn) { ctx.globalAlpha = .22; for (let yy=59; yy<74; yy++){ const w = (yy-59)*1.2+8; R(139-w/2,yy,w,1,"#FFE88A"); } ctx.globalAlpha = 1; }
+  // キャラクター
+  const now = performance.now();
+  let mood = "idle";
+  if (now < fx.cheerUntil) mood = "cheer"; else if (now < fx.winkUntil) mood = "wink"; else if (now < fx.happyUntil) mood = "happy";
+  else if (fx.studying) mood = "study";
+  else if (H >= 23 || H < 5) mood = "sleepy";
+  else if (SUBJECTS.some(s=>subjStats(s.key).late)) mood = "worried";
+  const blink = (t % 3200) < 140;
+  const bob = (mood==="cheer"||mood==="happy") ? (Math.floor(t/140)%2 ? -4 : 0) : (Math.floor(t/600)%2 ? -1 : 0);
+  const cx = 34, cy = 62 + bob;
+  R(cx+8,118,24,3,"rgba(42,33,64,.25)");
+  drawRows(ctx, spriteFor(mood==="study"?"idle":mood, blink), cx, cy, 2, CPAL);
+  if (mood === "cheer") { // 両手を上げる
+    drawRows(ctx, ["kk","ss","LL","gg","gg"], cx, cy+22, 2, CPAL); drawRows(ctx, ["kk","ss","LL","gg","gg"], cx+36, cy+22, 2, CPAL);
+  }
+  if (mood === "study") { // 教科書を持つ
+    const sc = SUBJ[timer.sub] ? SUBJ[timer.sub].color : "#3D7BF0";
+    R(cx+10,cy+36,20,12,"#1E1626"); R(cx+11,cy+37,18,10,sc); R(cx+19,cy+37,2,10,"#FFFFFF"); R(cx+7,cy+40,4,4,CPAL.s); R(cx+29,cy+40,4,4,CPAL.s);
+    if (Math.floor(t/400)%2) drawRows(ctx, GLYPH.spark, cx+40, cy+2, 1, {y:"#FFD23F"});
+  }
+  if (mood === "worried" && Math.floor(t/700)%2) drawRows(ctx, GLYPH.drop, cx+38, cy+20, 1, PAL);
+  if (mood === "sleepy") { const k = Math.floor(t/500)%3; for (let i=0;i<=k;i++) drawRows(ctx, GLYPH.Z, cx+40+i*5, cy+10-i*6, 1, {k:"#4B3F72"}); }
+  if (mood === "happy" || mood === "cheer" || mood === "wink") drawRows(ctx, GLYPH.heart, cx+40, cy+8+(Math.floor(t/200)%2), 1, PAL);
+  // 紙吹雪
+  fx.parts = fx.parts.filter(q => q.life > 0);
+  fx.parts.forEach(q => { q.x += q.vx; q.y += q.vy; q.vy += .12; q.vx *= .99; q.life--; R(q.x,q.y,q.s,q.s,q.c); });
+}
+function drawDigits(s, x, y, c){
+  const D = {"0":["kkk","k.k","k.k","k.k","kkk"],"1":[".k.","kk.",".k.",".k.","kkk"],"2":["kkk","..k","kkk","k..","kkk"],"3":["kkk","..k","kkk","..k","kkk"],"4":["k.k","k.k","kkk","..k","..k"],"5":["kkk","k..","kkk","..k","kkk"],"6":["kkk","k..","kkk","k.k","kkk"],"7":["kkk","..k",".k.",".k.",".k."],"8":["kkk","k.k","kkk","k.k","kkk"],"9":["kkk","k.k","kkk","..k","kkk"]};
+  [...s].forEach((d,i) => drawRows(ctx, D[d]||[], x+i*4, y, 1, {k:c}));
+}
+function confetti(n){
+  const cols = ["#FF4F8B","#FFD23F","#3FD6A0","#3D7BF0","#9A5CF5","#FFFFFF"];
+  for (let i=0;i<n;i++) fx.parts.push({x:56, y:76, vx:(Math.random()-.5)*4, vy:-Math.random()*4-1.5, c:pick(cols), s:Math.random()<.3?2:1, life:60+Math.random()*40});
+}
+let lastFrame = 0;
+function loop(t){ if (t - lastFrame > 70) { lastFrame = t; drawRoom(t); } requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+
+/* ================= セリフ ================= */
+let sayT = null, hideT = null;
+function say(text, ms=6000){
+  const el = document.getElementById("say"), b = document.getElementById("bubble");
+  b.classList.remove("hide"); clearInterval(sayT); clearTimeout(hideT);
+  let i = 0; el.textContent = "";
+  sayT = setInterval(() => { i++; el.textContent = text.slice(0,i); if (i >= text.length) { clearInterval(sayT); if (ms) hideT = setTimeout(()=>b.classList.add("hide"), ms); } }, 35);
+}
+const TIPS = [
+  "計算問題は、解説を読むだけじゃなくて紙に書いて解こうね。",
+  "わからないところは、各単元の質問BOXからTACに質問できるよ。",
+  "問題集は難易度A・Bを中心にくり返そう。Cは余力があればでOK！",
+  "電卓は開平（√）機能付きを用意してね。関数電卓は試験で使えないよ。",
+  "実力テストは何度でも解けるけど、成績になるのは初回の点数だよ。",
+  "総まとめ講義動画は、テキストで覚えたことの整理にぴったり！",
+  "4科目は3年以内（6回の試験）に全部合格すればOK。科目合格を積み上げよう。",
+  "理論では三角関数・ベクトル・複素数をよく使うよ。数学の範囲は受講ガイドp.10！",
+  "昼休みや通勤時間の15分も立派な勉強時間。毎日少しずつが大事だよ。",
+  "各科目の動画1回目の冒頭はガイダンス。出題傾向がわかるから最初に見よう。",
+];
+function greet(){
+  const H = new Date().getHours(), t = today(), S = state.settings;
+  const lines = [];
+  const lateS = SUBJECTS.map(s=>({s,st:subjStats(s.key)})).find(x=>x.st.lateList.length);
+  const todayMin = minutesIn(t,t), sk = streak();
+  const ex = S.examDate ? diffDays(t, S.examDate) : null, dl = S.deadline ? diffDays(t, S.deadline) : null;
+  if (!SUBJECTS.some(s=>subjStats(s.key).planned)) lines.push("はじめまして、ボルコだよ！まずは「設定」で期間を決めて、予定を自動作成してね。");
+  if (lateS) { const x = lateS.st.lateList[0]; lines.push(`${lateS.s.name} ${chCode(x.i)}「${lateS.s.ch[x.i][0]}」が予定より遅れてるよ…。まずは教科書だけでも開こう！`); }
+  if (todayMin) lines.push(`今日はもう${hm(todayMin)}勉強したね。えらい！`);
+  if (sk >= 3) lines.push(`${sk}日連続で勉強中！机の植物もぐんぐん育ってるよ。`);
+  if (dl !== null && dl >= 0 && dl <= 45) lines.push(`在籍期限まであと${dl}日。期限を過ぎると実力テストも解説も見られなくなるよ！`);
+  if (ex !== null && ex >= 0 && ex <= 30) lines.push(`試験まであと${ex}日！苦手マークの単元を見直そう。`);
+  if (!lines.length) lines.push(H < 5 || H >= 23 ? "ふぁ…もう遅いよ。15分だけやって寝よう？" : H < 11 ? "おはよう！今日も1ステップ進めよう。" : H < 17 ? "こんにちは！ちょっとだけ勉強していく？" : "おつかれさま！夜の勉強タイムだね。");
+  say(lines[0], 9000);
+}
+function cheer(text, big=false){
+  const now = performance.now();
+  if (big) { fx.cheerUntil = now + 2400; confetti(60); sfx("fanfare"); } else { fx.happyUntil = now + 1500; confetti(14); sfx("coin"); }
+  say(text, 5000);
+}
+cv.addEventListener("click", () => { fx.winkUntil = performance.now() + 1100; sfx("blip"); say(pick(TIPS), 7000); });
+
+/* ================= 効果音・雨音（ボタン操作のあとだけ鳴る） ================= */
+let actx = null, rainSrc = null;
+function ac(){ if (!actx) { const A = window.AudioContext || window.webkitAudioContext; if (!A) return null; actx = new A(); } if (actx.state === "suspended") actx.resume(); return actx; }
+function tone(seq, type="square", vol=.045){
+  const a = ac(); if (!a) return; let t = a.currentTime;
+  seq.forEach(([f,d]) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0005,t+d); o.connect(g).connect(a.destination); o.start(t); o.stop(t+d+.02); t += d*.85; });
+}
+function sfx(k){
+  if (!ui.sound) return;
+  try {
+    if (k==="coin") tone([[988,.07],[1319,.16]]);
+    else if (k==="blip") tone([[660,.05]], "square", .03);
+    else if (k==="fanfare") tone([[523,.1],[659,.1],[784,.1],[1047,.28]]);
+    else if (k==="alarm") tone([[880,.12],[0.01,.06],[880,.12],[0.01,.06],[1175,.3]]);
+  } catch(e) {}
+}
+function setRain(on){
+  fx.rain = on;
+  try {
+    const a = ac(); if (!a) return;
+    if (on && !rainSrc) {
+      const len = a.sampleRate*3, buf = a.createBuffer(1,len,a.sampleRate), d = buf.getChannelData(0); let last = 0;
+      for (let i=0;i<len;i++){ const w = Math.random()*2-1; last = (last + .02*w)/1.02; d[i] = last*3.2 + w*.035; }
+      const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
+      const f = a.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 1400;
+      const g = a.createGain(); g.gain.value = .55; src.connect(f).connect(g).connect(a.destination); src.start(); rainSrc = src;
+    } else if (!on && rainSrc) { rainSrc.stop(); rainSrc = null; }
+  } catch(e) {}
+}
+
+/* ================= 集中タイマー ================= */
+let timer = {sub:"riron", dur:25, endAt:0, remain:25*60000, running:false};
+try { const tj = JSON.parse(lsGet("denken.timer")||"null"); if (tj && typeof tj === "object") timer = Object.assign(timer, tj); } catch(e) {}
+const saveTimer = () => lsSet("denken.timer", JSON.stringify(timer));
+const tLeft = () => timer.running ? Math.max(0, timer.endAt - Date.now()) : timer.remain;
+const mmss = ms => { const s = Math.ceil(ms/1000); return `${pad(Math.floor(s/60))}:${pad(s%60)}`; };
+function addLog(sub, min, memo, d){
+  state.logs.push({id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), d: d || today(), sub, min, memo: (memo||"").slice(0,120)});
+  if (state.logs.length > 1500) state.logs = state.logs.sort((a,b)=>a.d<b.d?-1:1).slice(-1500);
+}
+function tick(){
+  fx.studying = timer.running;
+  if (timer.running && tLeft() <= 0) {
+    const min = timer.dur; timer.running = false; timer.remain = timer.dur*60000; saveTimer();
+    addLog(timer.sub, min, "集中タイマー");
+    sfx("alarm"); commit(); cheer(`${(SUBJ[timer.sub]||{name:"勉強"}).name}を${min}分やりきった！記録しておいたよ。`, true);
+  }
+  const f = document.getElementById("tface"); if (f) f.textContent = mmss(tLeft());
+  const b = document.getElementById("tbarfill"); if (b) b.style.width = (100 - tLeft()/(timer.dur*60000)*100).toFixed(1) + "%";
+  const chip = document.getElementById("timerchip");
+  const html = timer.running && ui.tab !== "timer" ? `<button class="timerchip" data-act="tab" data-k="timer">● 集中中 ${(SUBJ[timer.sub]||{}).name||""} <span class="num">${mmss(tLeft())}</span></button>` : "";
+  if (chip.innerHTML !== html) chip.innerHTML = html;
+}
+setInterval(tick, 500);
+
+/* ================= アイコン ================= */
+const ICONS = {
+  home:["...kk...","..kkkk..",".kkkkkk.","kkkkkkkk",".k....k.",".k.kk.k.",".k.kk.k.",".kkkkkk."],
+  book:["kkk..kkk","k..kk..k","k..kk..k","k..kk..k","k..kk..k","k..kk..k","kkkkkkkk","........"],
+  timer:["..kkkk..",".k....k.","k...k..k","k...k..k","k...kk.k","k......k",".k....k.","..kkkk.."],
+  log:["........","......k.","......k.","...k..k.","...k..k.","k..k..k.","k..k..k.","kkkkkkkk"],
+  gear:["...kk...",".kkkkkk.",".kk..kk.","kk....kk","kk....kk",".kk..kk.",".kkkkkk.","...kk..."],
+  bolt:["....kk..","...kk...","..kk....",".kkkkkk.","....kk..","...kk...","..kk....",".k......"],
+};
+const svgOf = m => m.map((row,y)=>[...row].map((c,x)=>c==="k"?`<rect x="${x}" y="${y}" width="1" height="1"/>`:"").join("")).join("");
+const icon = k => `<svg viewBox="0 0 8 8" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">${svgOf(ICONS[k])}</svg>`;
+["ic-bolt","ic-bolt-t"].forEach(id => { const el = document.getElementById(id); el.setAttribute("fill","currentColor"); el.innerHTML = svgOf(ICONS.bolt); });
+
+/* ================= 描画 ================= */
+const TABS = [["home","ホーム","home"],["units","単元","book"],["timer","タイマー","timer"],["log","記録","log"],["settings","設定","gear"]];
+function render(){
+  if (!TABS.some(t=>t[0]===ui.tab)) ui.tab = "home";
+  document.getElementById("nav").innerHTML = TABS.map(([k,l,ic]) => `<button class="nbtn" data-act="tab" data-k="${k}" ${ui.tab===k?'aria-current="page"':""}>${icon(ic)}<span>${l}</span></button>`).join("");
+  const v = document.getElementById("view");
+  v.innerHTML = ui.tab==="home" ? viewHome() : ui.tab==="units" ? viewSubject(ui.subj) : ui.tab==="timer" ? viewTimer() : ui.tab==="log" ? viewLog() : viewSettings();
+  drawQR();
+  // HUD
+  const xp = xpTotal(), lv = lvOf(xp), a = xpFor(lv), b = xpFor(lv+1);
+  document.getElementById("lv").textContent = lv;
+  document.getElementById("xp").textContent = xp.toLocaleString();
+  document.getElementById("xpfill").style.width = ((xp-a)/(b-a)*100).toFixed(1) + "%";
+  document.getElementById("xpnext").textContent = `次のLvまで ${b-xp}`;
+  const top = document.getElementById("tacTop"), u = safeUrl(state.settings.tacTop);
+  top.href = u || "#"; top.setAttribute("aria-disabled", u ? "false" : "true");
+  // ステータス
+  const S = state.settings, t = today();
+  const ex = S.examDate ? diffDays(t, S.examDate) : null, dl = S.deadline ? diffDays(t, S.deadline) : null;
+  const ws = weekStart(t), wmin = minutesIn(ws, addDays(ws,6));
+  document.getElementById("status").innerHTML =
+    `<div class="stat px ${ex!==null&&ex<30?"alert":""}"><span class="l">試験まで</span><span class="v num">${ex===null?"—":ex}<small>${ex===null?"":"日"}</small></span></div>
+     <div class="stat px ${dl!==null&&dl<45?"alert":""}"><span class="l">在籍期限まで</span><span class="v num">${dl===null?"—":dl}<small>${dl===null?"":"日"}</small></span></div>
+     <div class="stat px"><span class="l">今週</span><span class="v num">${(wmin/60).toFixed(1)}<small>/${S.weeklyGoal||0}h</small></span></div>`;
+  tick();
+}
+function checkLevel(silent){
+  const lv = lvOf(xpTotal()), last = +(lsGet("denken.lv")||0);
+  if (!last || silent) { lsSet("denken.lv", String(lv)); return; }
+  if (lv > last) { lsSet("denken.lv", String(lv)); setTimeout(() => cheer(`レベルアップ！ Lv${lv} になったよ！`, true), 900); }
+  else if (lv < last) lsSet("denken.lv", String(lv));
+}
+
+function viewHome(){
+  const S = state.settings, t = today();
+  const tasks = allTasks().slice(0,5);
+  const anyPlan = SUBJECTS.some(s => subjStats(s.key).planned || Object.values(state.progress[s.key].ch).some(c => Object.values(c.sec||{}).some(x => x.plan)));
+  const next = tasks.length ? `<ul class="next">${tasks.map(k => {
+    const late = k.plan && k.plan < t, soon = k.plan && !late && diffDays(t,k.plan) <= 7;
+    const u = safeUrl(S.subjects[k.sub.key].url);
+    return `<li style="--sc:${k.sub.color}"><span class="ch">${k.sub.name} ${k.code}　${esc(k.sub2||"")}</span>
+      <span class="tt">${esc(k.title)}<span>つぎ：${esc(k.step)}　${k.plan?`予定 ${md(k.plan)}`:"予定日なし"} ${late?'<span class="pill bad">遅れ</span>':soon?'<span class="pill warn">今週</span>':""}</span></span>
+      <span style="display:flex;gap:4px">${u?`<a class="btn tiny pink" href="${esc(u)}" target="_blank" rel="noopener">TAC↗</a>`:""}<button class="btn tiny" data-act="open" data-s="${k.sub.key}" data-c="${k.chi}">やる</button></span></li>`;}).join("")}</ul>`
+    : `<div class="empty">全単元と実力テストをクリア！本試験に向けて苦手単元を復習しよう。</div>`;
+  const due = SUBJECTS.reduce((a,s)=>{ const x = subjStats(s.key); a.d += x.secDue; a.w += x.secWeek; return a; }, {d:0,w:0});
+  const quota = anyPlan ? `<div class="quota"><span>今日までの節 <b class="num">${due.d}</b></span><span>今週あと <b class="num">${due.w}</b> 節</span></div>` : "";
+  const prog = SUBJECTS.map(s => {
+    const x = subjStats(s.key), cfg = S.subjects[s.key], delta = x.doneAll - x.expected;
+    const st = !x.planned ? `<span class="pill n">予定なし</span>` : x.late ? `<span class="pill bad">${x.late}遅れ</span>` : delta>0 ? `<span class="pill ok">${delta}先行</span>` : `<span class="pill ok">順調</span>`;
+    const expPct = x.planned ? x.expected/x.total*100 : null;
+    return `<div class="sp" style="--sc:${s.color}"><span class="nm">${s.name}</span>
+      <div class="track"><b style="width:${(x.ratio*100).toFixed(1)}%"></b>${expPct!==null?`<span class="exp" style="left:calc(${expPct.toFixed(1)}% - 1px)"></span>`:""}</div>
+      <span class="st"><span class="num">${x.doneAll}/${x.total}</span> ${st}</span>
+      <span class="meta">${md(cfg.start)}〜${md(cfg.end)}${x.weak.length?`　苦手：${x.weak.map(w=>esc(s.ch[w.i][0])).join("・")}`:""}</span></div>`;
+  }).join("");
+  return `<section class="panel px">
+      <div class="head"><h2>クエスト</h2><span class="small muted">節ごとに 教科書→問題集、単元の最後にミニテスト・総まとめ動画</span></div>
+      ${quota}
+      ${!anyPlan?`<div class="empty" style="margin-bottom:12px">修了予定日がまだないよ。開始日とゴール日を決めれば、全部の節の予定をまとめて作れるよ。<br><button class="btn tiny pink" data-act="gobulk" style="margin-top:6px">予定をまとめて作成</button></div>`:`<div style="text-align:right;margin:-4px 0 8px"><button class="btn tiny light" data-act="gobulk">予定を作り直す</button></div>`}
+      ${next}
+    </section>
+    <section class="panel px">
+      <div class="head"><h2>科目ゲージ</h2><span class="small muted">ピンクの線＝今日までの予定</span></div>
+      ${prog}
+    </section>
+    <section class="panel px">
+      <div class="head"><h2>今日の学習を記録</h2><span class="small muted num">${ymd(t)}</span></div>
+      ${logForm()}
+    </section>`;
+}
+function logForm(){
+  const subs = [...SUBJECTS.map(s=>[s.key,s.name,s.color]), ["other","数学・その他","#4B3F72"]];
+  return `<form class="qlog" id="logForm">
+    <div class="full chips" role="group" aria-label="科目">${subs.map(([k,n,c])=>`<button type="button" class="chip" style="--sc:${c}" data-act="logsub" data-k="${k}" aria-pressed="${ui.logSub===k}">${n}</button>`).join("")}</div>
+    <div class="full chips" role="group" aria-label="時間">${[15,30,45,60,90,120].map(m=>`<button type="button" class="chip" data-act="logmin" data-k="${m}" aria-pressed="${ui.logMin===m}">${hm(m)}</button>`).join("")}</div>
+    <label class="f">日付<input type="date" id="logDate" value="${today()}"></label>
+    <label class="f">分<input type="number" id="logMinInput" min="1" max="1440" step="5" value="${ui.logMin}"></label>
+    <label class="f full">メモ<input type="text" id="logMemo" maxlength="120" placeholder="例：CH04 交流回路 問題集A"></label>
+    <button class="btn pink full" type="submit" style="justify-content:center">記録する</button>
+  </form>`;
+}
+function viewSubject(key){
+  const s = SUBJ[key], p = state.progress[key], cfg = state.settings.subjects[key], x = subjStats(key), t = today();
+  const u = safeUrl(cfg.url);
+  const rows = s.ch.map((ch,i) => {
+    const code = chCode(i), c = p.ch[code], late = !isDone(c) && c.plan && c.plan < t;
+    const secs = secsOf(key,i), nb = secs.filter((_,j)=>secProg(c,j).b).length, nq = secs.filter((_,j)=>secProg(c,j).q).length;
+    const openK = `${key}-${code}`, editing = ui.editToc === openK;
+    const secRows = secs.map((x,j) => { const sp = secProg(c,j), sl = !(sp.b&&sp.q) && sp.plan && sp.plan < t;
+      return `<li class="sec ${sp.b&&sp.q?"ok":""}">
+        <span class="sn"><b>${secCode(j)}</b> ${esc(x.t)}${x.p?` <span class="muted">p.${esc(x.p)}</span>`:""}${sl?' <span class="pill bad">遅れ</span>':""}</span>
+        <input type="date" id="sp-${key}-${code}-${j}" data-act="secplan" data-s="${key}" data-c="${code}" data-k="${j}" value="${sp.plan}" aria-label="${esc(x.t)}の予定日">
+        <span class="sb"><button class="step mini" data-act="sec" data-s="${key}" data-c="${code}" data-k="${j}" data-f="b" aria-pressed="${sp.b}">教科書</button><button class="step mini" data-act="sec" data-s="${key}" data-c="${code}" data-k="${j}" data-f="q" aria-pressed="${sp.q}">問題集</button></span>
+      </li>`; }).join("");
+    const tocText = secs.map(x => x.t + (x.p ? ` | ${x.p}` : "")).join("\n");
+    return `<div class="chap px ${isDone(c)?"done":""}">
+      <div class="name"><span class="code">${code}</span><span>${esc(ch[0])}</span>${isDone(c)?'<span class="pill ok">CLEAR</span>':late?'<span class="pill bad">遅れ</span>':""}</div>
+      <div class="steps" role="group" aria-label="${esc(ch[0])}の学習ステップ">${STEPS.map((st,k)=>`<button class="step" data-act="step" data-s="${key}" data-c="${code}" data-k="${k}" aria-pressed="${c.s[k]}">${st}${k===0?`<small>${nb}/${secs.length}節</small>`:k===2?`<small>${nq}/${secs.length}節</small>`:""}</button>`).join("")}</div>
+      <details class="secs" data-k="${openK}" ${ui.open[openK]?"open":""}>
+        <summary>節ごとの予定とチェック（${secs.length}節）</summary>
+        ${editing ? `<div class="tocedit">
+            <label class="f" for="toc-${openK}">1行に1節。「見出し | 12-25」のようにページ範囲を書くと、予定づくりでページ数に合わせて配分します。</label>
+            <textarea id="toc-${openK}" rows="${Math.max(3,secs.length+1)}">${esc(tocText)}</textarea>
+            <div class="chips"><button class="btn tiny pink" data-act="tocsave" data-s="${key}" data-c="${code}">保存</button><button class="btn tiny light" data-act="tocreset" data-s="${key}" data-c="${code}">第3版の目次に戻す</button><button class="btn tiny light" data-act="tocedit" data-k="">やめる</button></div>
+          </div>`
+        : `<ol class="seclist">${secRows}</ol><div class="chips" style="margin-top:8px"><button class="btn tiny light" data-act="tocedit" data-k="${openK}">節・ページを編集</button></div>`}
+      </details>
+      <div class="dates">
+        <label class="f">単元の修了予定<input type="date" id="plan-${key}-${code}" data-act="plan" data-s="${key}" data-c="${code}" value="${c.plan}"></label>
+        <label class="f">修了日<input type="date" id="done-${key}-${code}" data-act="done" data-s="${key}" data-c="${code}" value="${c.done}"></label>
+      </div>
+      <label class="f">中間ミニテスト（冊子の回・ページ）<input type="text" id="mt-${key}-${code}" data-act="mt" data-s="${key}" data-c="${code}" maxlength="60" value="${esc(c.mt)}" placeholder="例：第1回 p.2–9"></label>
+      <div class="row2">
+        <div class="chips ustate" role="group" aria-label="理解度">${[[1,"苦手","weak"],[2,"ふつう","mid"],[3,"得意","good"]].map(([v,l,cl])=>`<button class="chip ${cl}" data-act="u" data-s="${key}" data-c="${code}" data-k="${v}" aria-pressed="${c.u===v}">${l}</button>`).join("")}</div>
+        <input class="memo" type="text" id="memo-${key}-${code}" data-act="memo" data-s="${key}" data-c="${code}" maxlength="200" value="${esc(c.memo)}" placeholder="メモ（質問BOXで聞きたいこと等）">
+      </div>
+    </div>`;
+  }).join("");
+  const tt = p.test;
+  return `<section class="panel px" style="--sc:${s.color}">
+      <div class="subjbar">
+        <div class="chips" role="tablist">${SUBJECTS.map(z=>`<button class="chip" style="--sc:${z.color}" role="tab" data-act="subj" data-k="${z.key}" aria-pressed="${z.key===key}">${z.name}</button>`).join("")}</div>
+        <span class="small">CLEAR <span class="num">${x.doneAll}/${x.total}</span> ${x.late?`<span class="pill bad">${x.late}遅れ</span>`:""}</span>
+      </div>
+      <div class="chips" style="margin-top:10px">
+        <button class="btn tiny ${ui.armed===key?"armed":""}" data-act="auto" data-s="${key}">${ui.armed===key?"もう一度押すと上書き":"予定を自動作成"}</button>
+        ${u?`<a class="btn tiny pink" href="${esc(u)}" target="_blank" rel="noopener">TACで${s.name}を開く ↗</a>`:`<button class="btn tiny light" data-act="tab" data-k="settings">TACのURLを登録</button>`}
+      </div>
+      <ol class="flow"><li>①教科書</li><li>②中間ミニテスト</li><li>③問題集A・B</li><li>④総まとめ動画</li><li>⑤実力テスト</li></ol>
+      <p class="small muted" style="margin:8px 0 0">節は『みんなが欲しかった！電験三種 ${s.name}の教科書&問題集 第3版』の目次（<a href="${s.book}" target="_blank" rel="noopener">TAC出版</a>）。ページ範囲を入れると予定がより正確になります。</p>
+    </section>
+    <div class="chaplist" style="--sc:${s.color}">${rows}
+      <div class="chap px test">
+        <div class="name"><span class="code">課題</span><span>実力テスト</span>${tt.done?'<span class="pill ok">提出済み</span>':""}</div>
+        <div class="dates"><label class="f">実施予定<input type="date" id="tplan-${key}" data-act="tplan" data-s="${key}" value="${tt.plan}"></label>
+          <label class="f">提出日<input type="date" id="tdone-${key}" data-act="tdone" data-s="${key}" value="${tt.done}"></label></div>
+        <label class="f">初回の点数<input type="number" id="tscore-${key}" data-act="tscore" data-s="${key}" min="0" max="100" value="${esc(tt.score)}" placeholder="点"></label>
+        <p class="note" style="margin:0">成績になるのは<b style="font-weight:400;color:var(--bad)">初回の採点結果</b>。全単元を終えてから受けよう。</p>
+      </div>
+    </div>`;
+}
+function viewTimer(){
+  const subs = [...SUBJECTS.map(s=>[s.key,s.name,s.color]), ["other","その他","#4B3F72"]];
+  const lock = timer.running ? "disabled" : "";
+  const elapsed = Math.floor((timer.dur*60000 - tLeft())/60000);
+  return `<section class="panel px">
+      <div class="head"><h2>集中タイマー</h2><span class="small muted">終わると自動で学習記録に追加</span></div>
+      <div class="tface" id="tface">${mmss(tLeft())}</div>
+      <div class="tbar"><b id="tbarfill" style="width:0%"></b></div>
+      <div class="tsec"><span class="lbl">科目</span><div class="chips">${subs.map(([k,n,c])=>`<button class="chip" style="--sc:${c}" data-act="tsub" data-k="${k}" aria-pressed="${timer.sub===k}" ${lock}>${n}</button>`).join("")}</div></div>
+      <div class="tsec"><span class="lbl">時間</span><div class="chips">${[15,25,45,60,90].map(m=>`<button class="chip" data-act="tdur" data-k="${m}" aria-pressed="${timer.dur===m}" ${lock}>${m}分</button>`).join("")}</div></div>
+      <div class="tctl">
+        ${timer.running?`<button class="btn" data-act="tpause">一時停止</button>`:`<button class="btn pink" data-act="tstart">${timer.remain < timer.dur*60000 ? "再開" : "スタート"}</button>`}
+        <button class="btn light" data-act="treset">リセット</button>
+        ${!timer.running && elapsed >= 1 ? `<button class="btn light" data-act="tsave">ここまでの${elapsed}分を記録</button>` : ""}
+      </div>
+    </section>
+    <section class="panel px">
+      <div class="head"><h2>環境音</h2></div>
+      <div class="chips"><button class="chip" data-act="rain" aria-pressed="${fx.rain}">雨音 ${fx.rain?"ON":"OFF"}</button><button class="chip" data-act="sound" aria-pressed="${ui.sound}">効果音 ${ui.sound?"ON":"OFF"}</button></div>
+      <p class="small muted" style="margin:10px 0 0">雨音はこのページを開いている間だけ流れます。タイマー中はボルコも一緒に勉強して、机のランプが点きます。</p>
+    </section>`;
+}
+function viewLog(){
+  const t = today(), start = addDays(weekStart(t), -7*15);
+  const byDay = {}; state.logs.forEach(l => { byDay[l.d] = (byDay[l.d]||0) + (+l.min||0); });
+  let cells = "";
+  for (let d = start; d <= addDays(weekStart(t),6); d = addDays(d,1)) {
+    const m = byDay[d]||0, lv = d > t ? 0 : m===0?0: m<30?1: m<60?2: m<120?3:4;
+    cells += `<i data-l="${lv}" class="${d===t?"today":""}" title="${ymd(d)} ${hm(m)}" ${d>t?'style="opacity:.35"':""}></i>`;
+  }
+  const subs = [...SUBJECTS, {key:"other",name:"その他",color:"#4B3F72"}];
+  const per = subs.map(s => ({s, m: state.logs.filter(l=>l.sub===s.key).reduce((a,l)=>a+(+l.min||0),0)}));
+  const max = Math.max(1, ...per.map(x=>x.m)), total = totalMin(), d30 = minutesIn(addDays(t,-29), t);
+  const list = [...state.logs].sort((a,b)=> a.d<b.d?1:a.d>b.d?-1:0).slice(0,60);
+  return `<section class="mini">
+      <div class="stat px"><span class="l">累計</span><span class="v num">${(total/60).toFixed(1)}<small>h</small></span></div>
+      <div class="stat px"><span class="l">直近30日</span><span class="v num">${(d30/60).toFixed(1)}<small>h</small></span></div>
+      <div class="stat px"><span class="l">連続学習</span><span class="v num">${streak()}<small>日</small></span></div>
+      <div class="stat px"><span class="l">ボルト</span><span class="v num">${xpTotal()}</span></div>
+    </section>
+    <section class="panel px"><div class="head"><h2>学習カレンダー</h2><span class="small muted">直近16週</span></div>
+      <div class="heat">${cells}</div>
+      <div class="legend">少 <i style="background:var(--h0)"></i><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i> 2h以上</div>
+    </section>
+    <section class="panel px"><div class="head"><h2>科目別の時間</h2></div>
+      <div class="bars">${per.map(x=>`<div class="bar" style="--sc:${x.s.color}"><span style="color:${x.s.color}">${x.s.name}</span><div class="track"><b style="width:${(x.m/max*100).toFixed(1)}%"></b></div><span class="num" style="text-align:right">${(x.m/60).toFixed(1)}h</span></div>`).join("")}</div>
+    </section>
+    <section class="panel px"><div class="head"><h2>学習を記録</h2></div>${logForm()}</section>
+    <section class="panel px"><div class="head"><h2>記録一覧</h2><span class="small muted">新しい順</span></div>
+      ${list.length?`<ul class="loglist">${list.map(l=>{const s=SUBJ[l.sub]||{name:"その他",color:"#4B3F72"}; return `<li><span class="num">${ymd(l.d)}</span><span style="color:${s.color}">${s.name}</span><span>${hm(l.min)}${l.memo?` <span class="muted">${esc(l.memo)}</span>`:""}</span><button class="btn tiny ${ui.armed==="log-"+l.id?"armed":"light"}" data-act="dellog" data-k="${esc(l.id)}">${ui.armed==="log-"+l.id?"消す":"×"}</button></li>`;}).join("")}</ul>`
+        :`<div class="empty">まだ記録がないよ。タイマーを使うか、上のフォームから記録してね。</div>`}
+    </section>`;
+}
+const APP_URL = location.origin + location.pathname.replace(/index\.html$/, "");
+function drawQR(){
+  const box = document.getElementById("qr"); if (!box) return;
+  try {
+    const q = window.qrcode(0, "M"); q.addData(APP_URL); q.make();
+    const n = q.getModuleCount(), m = 2; let rects = "";
+    for (let r=0;r<n;r++) for (let c=0;c<n;c++) if (q.isDark(r,c)) rects += `<rect x="${c+m}" y="${r+m}" width="1" height="1"/>`;
+    box.innerHTML = `<svg viewBox="0 0 ${n+m*2} ${n+m*2}" shape-rendering="crispEdges" role="img" aria-label="このアプリを開くQRコード"><rect width="100%" height="100%" fill="#FFFFFF"/><g fill="#2A2140">${rects}</g></svg>`;
+  } catch(e) { box.innerHTML = `<div class="empty small">QRコードを表示できませんでした。下のURLをスマホに送ってください。</div>`; }
+}
+/* ================= 一括スケジュール（科目の期間 → 節・単元の修了予定 → 実力テスト） ================= */
+function defaultGoal(){
+  const S = state.settings, c = [S.examDate, S.deadline].filter(Boolean).sort();
+  return c[0] || addMonths(today(), 12);
+}
+function planCfg(){
+  const S = state.settings; S.plan ??= {};
+  const P = S.plan; P.start ||= today(); P.goal ||= defaultGoal(); P.mode ||= "seq"; P.buffer ??= 14;
+  P.subs = P.subs && typeof P.subs === "object" ? P.subs : {};
+  SUBJECTS.forEach(s => { P.subs[s.key] ??= true; });
+  return P;
+}
+const subjWeight = key => SUBJ[key].ch.reduce((a,_,i) => a + secsOf(key,i).length + 0.6, 0);
+function bulkPlan(){
+  const P = planCfg(), subs = SUBJECTS.filter(s => P.subs[s.key]);
+  const fail = t => { ui.bulkMsg = {ok:false, text:t}; toast(t); return null; };
+  if (!subs.length) return fail("科目を1つ以上選んでね");
+  if (!P.start || !P.goal) return fail("学習開始日とゴール日を入れてね");
+  const end = addDays(P.goal, -Math.max(0, +P.buffer||0));
+  if (end <= P.start) return fail(`ゴール日から見直し期間${P.buffer}日を引くと ${md(end)} になり、開始日 ${md(P.start)} より前です。ゴール日か見直し期間を変えてね`);
+  const span = diffDays(P.start, end);
+  if (P.mode === "par") {
+    subs.forEach(s => { state.settings.subjects[s.key].start = P.start; state.settings.subjects[s.key].end = end; });
+  } else {
+    const w = subs.map(s => subjWeight(s.key)), tw = w.reduce((a,b)=>a+b,0);
+    let acc = 0, prev = P.start;
+    subs.forEach((s,i) => { acc += w[i]; const e2 = i === subs.length-1 ? end : addDays(P.start, Math.round(span*acc/tw));
+      state.settings.subjects[s.key].start = prev; state.settings.subjects[s.key].end = e2; prev = addDays(e2, 1); });
+  }
+  let n = 0; subs.forEach(s => { if (autoPlan(s.key)) n++; });
+  return {n, end, subs};
+}
+function viewBulk(){
+  const P = planCfg(), S = state.settings, end = addDays(P.goal, -Math.max(0,+P.buffer||0));
+  const preview = (() => { const subs = SUBJECTS.filter(s => P.subs[s.key]); if (!subs.length || end <= P.start) return "";
+    if (P.mode === "par") return subs.map(s=>s.name).join("・") + `を ${md(P.start)}〜${md(end)} に並行して進めます`;
+    const w = subs.map(s=>subjWeight(s.key)), tw = w.reduce((a,b)=>a+b,0), span = diffDays(P.start,end); let acc = 0, prev = P.start;
+    return subs.map((s,i) => { acc += w[i]; const e2 = i===subs.length-1 ? end : addDays(P.start, Math.round(span*acc/tw)); const r = `<span style="color:${s.color}">${s.name}</span> ${md(prev)}〜${md(e2)}`; prev = addDays(e2,1); return r; }).join("　→　"); })();
+  return `<section class="panel px" id="bulk">
+      <div class="head"><h2>予定をまとめて作成</h2><span class="small muted">科目の期間・節と単元の修了予定日・実力テストを一度に</span></div>
+      <div class="sgrid">
+        <label class="f">学習開始日<input type="date" id="pl-start" data-act="pl" data-k="start" value="${P.start}"></label>
+        <label class="f">ゴール日（試験日・在籍期限の早いほう）<input type="date" id="pl-goal" data-act="pl" data-k="goal" value="${P.goal}"></label>
+        <label class="f">直前の見直し期間（日）<input type="number" id="pl-buffer" data-act="pl" data-k="buffer" min="0" max="120" value="${P.buffer}"></label>
+      </div>
+      ${S.examDate || S.deadline ? `<div class="chips" style="margin-top:8px">${S.examDate?`<button class="chip" data-act="plgoal" data-k="${S.examDate}">試験日 ${md(S.examDate)}</button>`:""}${S.deadline?`<button class="chip" data-act="plgoal" data-k="${S.deadline}">在籍期限 ${md(S.deadline)}</button>`:""}</div>` : `<p class="small muted" style="margin:8px 0 0">下の「試験と受講期間」に試験日と在籍期限を入れると、ゴール日をワンタップで選べます。</p>`}
+      <div class="tsec"><span class="lbl">進め方</span><div class="chips">
+        <button class="chip" data-act="plmode" data-k="seq" aria-pressed="${P.mode==="seq"}">1科目ずつ順番に</button>
+        <button class="chip" data-act="plmode" data-k="par" aria-pressed="${P.mode==="par"}">全科目を並行</button></div></div>
+      <div class="tsec"><span class="lbl">対象の科目（順番はこの並び）</span><div class="chips">${SUBJECTS.map(s=>`<button class="chip" style="--sc:${s.color}" data-act="plsub" data-k="${s.key}" aria-pressed="${!!P.subs[s.key]}">${s.name}</button>`).join("")}</div></div>
+      ${preview?`<p class="plprev">${preview}</p>`:""}
+      ${ui.armed==="bulk"
+        ? `<div class="plconfirm" id="plconfirm"><p style="margin:0 0 8px">すでに予定があります。修了していない単元・節の予定を、この内容で作り直しますか？</p>
+            <div class="chips"><button class="btn pink" data-act="bulkgo">上書きして作成</button><button class="btn light" data-act="bulkcancel">やめる</button></div></div>`
+        : `<button class="btn pink" data-act="bulk" style="margin-top:12px">この内容で予定を作成</button>`}
+      ${ui.bulkMsg?`<p class="plmsg ${ui.bulkMsg.ok?"ok":"bad"}" id="plmsg">${esc(ui.bulkMsg.text)}</p>`:P.last?`<p class="small muted" style="margin:8px 0 0">前回の作成：${esc(P.last)}</p>`:""}
+      <p class="small muted" style="margin:8px 0 0">各科目の期間の最後の約1割は総まとめ動画と実力テスト用。節の分量（ページ範囲を入れていればページ数）に合わせて修了予定日を割り振ります。修了済みの単元・節は変えません。</p>
+    </section>`;
+}
+const DATA_IMPORT_UI = `<label class="btn tiny light" for="importFile" style="cursor:pointer">データを読み込む（JSON）</label><input type="file" id="importFile" accept=".json,application/json" hidden>`;
+/* ファイル保存：結果は "saved" / "declined" / "failed" */
+async function saveFile(name, text){
+  try {
+    const type = name.endsWith(".csv") ? "text/csv" : "application/json";
+    const url = URL.createObjectURL(new Blob([text], {type: type + ";charset=utf-8"}));
+    const el = document.createElement("a"); el.href = url; el.download = name; document.body.appendChild(el); el.click(); el.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000); return "saved";
+  } catch(e) { return "failed"; }
+}
+/* ================= Googleカレンダー連携（Androidに通知を出すため） ================= */
+function calCfg(){ const S = state.settings; S.cal ??= {}; S.cal.time ||= "20:00"; S.cal.dur ||= 60; return S.cal; }
+function calendarDays(){
+  const t = today(), byDay = {}, add = (d, txt) => { if (d && d >= t) (byDay[d] ??= []).push(txt); };
+  SUBJECTS.forEach(s => { const p = state.progress[s.key];
+    s.ch.forEach((ch,i) => { const c = p.ch[chCode(i)]; if (isDone(c)) return;
+      secsOf(s.key,i).forEach((x,j) => { const sp = secProg(c,j); if (sp.b && sp.q) return;
+        add(sp.plan, `${s.name} ${chCode(i)}-${secCode(j)} ${x.t}${x.p?` p.${x.p}`:""}（${sp.b?"問題集":"教科書→問題集"}）`); });
+      add(c.plan, `${s.name} ${chCode(i)} ${ch[0]} のしあげ（中間ミニテスト${c.mt?` ${c.mt}`:""}・総まとめ動画）`); });
+    if (!p.test.done) add(p.test.plan, `${s.name} 実力テスト（Webで解答・成績になるのは初回）`); });
+  const S = state.settings;
+  if (S.deadline) add(S.deadline, "TAC在籍期限（この日を過ぎると実力テスト・解説が見られません）");
+  if (S.examDate) add(S.examDate, "電験三種 本試験");
+  return byDay;
+}
+function calendarCsv(){
+  const C = calCfg(), days = calendarDays(), q = v => `"${String(v).replace(/"/g,'""')}"`;
+  const [hh, mm] = C.time.split(":").map(Number);
+  const ampm = m => { const h = Math.floor(m/60)%24, mi = m%60; return `${pad(((h+11)%12)+1)}:${pad(mi)} ${h<12?"AM":"PM"}`; };
+  const us = d => { const x = parse(d); return `${pad(x.getMonth()+1)}/${pad(x.getDate())}/${x.getFullYear()}`; };
+  const startM = hh*60+mm, endM = startM + (+C.dur||60), endDay = endM >= 1440;
+  const rows = [["Subject","Start Date","Start Time","End Date","End Time","All Day Event","Description","Private"].map(q).join(",")];
+  Object.keys(days).sort().forEach(d => { const items = days[d];
+    const title = `電験：${items[0]}${items.length>1?` ほか${items.length-1}件`:""}`;
+    const desc = `今日までに終える予定 → ${items.map(x=>"・"+x).join(" ")} ／ ボルコの電験ルーム ${APP_URL}`;
+    rows.push([title, us(d), ampm(startM), us(endDay ? addDays(d,1) : d), ampm(endM % 1440), "False", desc, "True"].map(q).join(",")); });
+  return {csv: rows.join("\r\n") + "\r\n", count: rows.length-1, first: Object.keys(days).sort()[0], last: Object.keys(days).sort().slice(-1)[0]};
+}
+function viewCal(){
+  const C = calCfg(), r = calendarCsv();
+  return `<section class="panel px" id="calsec">
+      <div class="head"><h2>Androidに通知（Googleカレンダー）</h2><span class="small muted">予定日に通知が届きます</span></div>
+      <p class="small" style="margin:0 0 10px">このアプリから直接は通知を出せないため、修了予定をGoogleカレンダーに取り込み、カレンダーアプリの通知を使います。1日1件にまとめて「電験：理論 CH01-02 合成抵抗 ほか1件」のように届きます。</p>
+      <div class="sgrid">
+        <label class="f">通知する勉強の開始時刻<input type="time" id="cal-time" data-act="cal" data-k="time" value="${esc(C.time)}"></label>
+        <label class="f">予定の長さ（分）<input type="number" id="cal-dur" data-act="cal" data-k="dur" min="10" max="240" step="5" value="${C.dur}"></label>
+      </div>
+      <p class="plprev">${r.count ? `今日以降の <b style="font-weight:400;color:var(--accent)">${r.count}日分</b>（${md(r.first)}〜${md(r.last)}）を書き出します` : "書き出す予定がありません。先に「予定をまとめて作成」をしてね"}</p>
+      <div class="chips" style="margin-top:10px"><button class="btn pink" data-act="calsave" ${r.count?"":"aria-disabled=\"true\""}>カレンダー用ファイルを保存（.csv）</button></div>
+      ${ui.calMsg?`<p class="plmsg ${ui.calMsg.ok?"ok":"bad"}">${esc(ui.calMsg.text)}</p>`:""}
+      ${ui.calText?`<label class="f" style="margin-top:10px">保存できない場合は、この内容をコピーして「denken.csv」という名前で保存してください<textarea readonly id="calText" rows="5" style="width:100%;font-size:.75rem">${esc(ui.calText)}</textarea></label>`:""}
+      <ol class="qrsteps" style="margin-top:12px">
+        <li>PCのブラウザで Googleカレンダー（calendar.google.com）を開き、設定 →「カレンダーを追加」→「新しいカレンダーを作成」で「電験三種」を作る</li>
+        <li>設定 →「インポート / エクスポート」で保存したCSVを選び、追加先を「電験三種」にしてインポート</li>
+        <li>「電験三種」カレンダーの設定 →「予定の通知」で「10分前」などを追加</li>
+        <li>AndroidのGoogleカレンダーアプリで同じアカウントを使い、通知をオンにする</li>
+      </ol>
+      <p class="small muted" style="margin:8px 0 0">予定を作り直したときは、「電験三種」カレンダーを削除して作り直してから取り込むと、古い予定が重なりません。</p>
+    </section>`;
+}
+/* ================= アカウント（Googleログイン）と毎日の通知 ================= */
+function notifyCfg(){ const S = state.settings; S.notify ??= {}; S.notify.on ??= false; S.notify.time ||= "20:00"; return S.notify; }
+/* 今日までに終える予定（通知・テスト通知の文面用。サーバー側 scripts/notify.mjs と同じ考え方） */
+function dueItems(){
+  const t = today(), out = [];
+  SUBJECTS.forEach(s => { const p = state.progress[s.key];
+    s.ch.forEach((ch,i) => { const c = p.ch[chCode(i)]; if (isDone(c)) return;
+      let allSec = true;
+      secsOf(s.key,i).forEach((x,j) => { const sp = secProg(c,j); if (sp.b && sp.q) return; allSec = false;
+        if (sp.plan && sp.plan <= t) out.push(`${s.name} ${chCode(i)}-${secCode(j)} ${x.t}`); });
+      if (allSec && c.plan && c.plan <= t) out.push(`${s.name} ${chCode(i)} しあげ（ミニテスト・総まとめ動画）`); });
+    if (!p.test.done && p.test.plan && p.test.plan <= t) out.push(`${s.name} 実力テスト`); });
+  return out;
+}
+function dueMessage(){
+  const d = dueItems();
+  return d.length ? {title: "ボルコ「今日の電験だよ！」", body: `今日までの予定 ${d.length}件：${d[0]}${d.length>1?` ほか${d.length-1}件`:""}`}
+                  : {title: "ボルコ「今日もちょっとだけやろ？」", body: "今日までの予定はクリア済み！15分だけ復習しよう。"};
+}
+function viewAccount(){
+  const head = `<div class="head"><h2>アカウントと通知</h2><span class="small muted">PC・スマホ同期と毎日の通知</span></div>`;
+  if (ui.auth === "off") return `<section class="panel px" id="account">${head}<div class="empty">Firebaseの設定（firebase-config.js）がまだのため、データはこの端末だけに保存されています。README の手順で設定すると、同期と通知が使えます。</div></section>`;
+  if (!ui.auth) return `<section class="panel px" id="account">${head}<p class="small muted" style="margin:0">接続中…</p></section>`;
+  const N = notifyCfg(), token = lsGet("denken.pushToken") || "";
+  const perm = ("Notification" in window) ? Notification.permission : "unsupported";
+  const permText = {granted:"許可済み", denied:"ブロック中（端末の設定 → アプリ → 通知 から許可してください）", default:"まだ許可していません", unsupported:"このブラウザは通知に対応していません"}[perm];
+  return `<section class="panel px" id="account">${head}
+    ${ui.user
+      ? `<p style="margin:0 0 8px">ログイン中：${esc(ui.user.name || "")} <span class="small muted">${esc(ui.user.email || "")}</span></p>
+         <div class="chips"><button class="btn tiny light" data-act="logout">ログアウト</button></div>
+         <div class="tsec"><span class="lbl">毎日の通知</span>
+           <div class="chips"><button class="chip" data-act="ntfon" aria-pressed="${N.on}">通知 ${N.on?"ON":"OFF"}</button></div>
+           <div class="sgrid"><label class="f">通知する時刻（日本時間）<input type="time" id="ntf-time" data-act="ntf" data-k="time" value="${esc(N.time)}"></label></div>
+           <div class="chips">
+             <button class="btn tiny ${token?"light":"pink"}" data-act="pushreg">${token?"この端末は登録済み（登録し直す）":"この端末で通知を受け取る"}</button>
+             <button class="btn tiny light" data-act="pushtest">テスト通知</button>
+             ${token?`<button class="btn tiny light" data-act="pushoff">この端末の通知をやめる</button>`:""}
+           </div>
+           <p class="small muted" style="margin:0">通知の許可：${permText}。毎日この時刻ごろ（最大30分ほど遅れることがあります）に、その日までの節をボルコがお知らせします。Androidでは、ホーム画面に追加したアプリから登録してください。</p>
+         </div>`
+      : `<p class="small" style="margin:0 0 8px">PCとスマホで同じGoogleアカウントでログインすると、進捗・予定・学習記録が同期され、毎日の通知も使えます。</p>
+         <button class="btn pink" data-act="login">Googleでログイン</button>`}
+    ${ui.acctMsg?`<p class="plmsg ${ui.acctMsg.ok?"ok":"bad"}">${esc(ui.acctMsg.text)}</p>`:""}
+  </section>`;
+}
+function acctMsg(ok, text){ ui.acctMsg = {ok, text}; render(); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const a = b.dataset.act, api = window.cloudApi;
+  if (a === "login" && api) { api.signIn().then(() => { ui.acctMsg = null; render(); }).catch(err => acctMsg(false, "ログインできませんでした（" + ((err && err.code) || "error") + "）")); }
+  else if (a === "logout" && api) { api.signOut(); ui.acctMsg = null; }
+  else if (a === "ntfon") { const N = notifyCfg(); N.on = !N.on; commit();
+    if (N.on && !lsGet("denken.pushToken")) acctMsg(true, "「この端末で通知を受け取る」も押してね。"); }
+  else if (a === "pushreg" && api && ui.user) {
+    api.enablePush(ui.user.uid).then(tok => { lsSet("denken.pushToken", tok); notifyCfg().on = true; commit();
+        acctMsg(true, `この端末を登録しました。毎日 ${notifyCfg().time} ごろに通知が届きます。`); say("通知の準備ができたよ！毎日お知らせするね。", 6000); })
+      .catch(err => { const c = err && err.code;
+        acctMsg(false, c === "denied" ? "通知がブロックされています。端末の設定でこのアプリの通知を許可してから、もう一度押してね。"
+          : c === "unsupported" ? "このブラウザは通知に対応していません。AndroidのChromeでホーム画面に追加したアプリから登録してね。"
+          : "登録できませんでした（" + (c || (err && err.message) || "error") + "）"); });
+  }
+  else if (a === "pushtest") {
+    if (!("Notification" in window) || !navigator.serviceWorker) { acctMsg(false, "このブラウザは通知に対応していません。"); return; }
+    Notification.requestPermission().then(p => {
+      if (p !== "granted") { acctMsg(false, "通知が許可されていません。"); return; }
+      const m = dueMessage();
+      navigator.serviceWorker.ready.then(reg => reg.showNotification(m.title, {body: m.body, icon: "icons/icon-192.png", badge: "icons/favicon-64.png", tag: "denken-test", data: {link: APP_URL}}));
+      acctMsg(true, "テスト通知を出しました。届かない場合は端末の通知設定を確認してね。");
+    });
+  }
+  else if (a === "pushoff" && api && ui.user) {
+    api.disablePush(ui.user.uid, lsGet("denken.pushToken")).finally(() => { lsSet("denken.pushToken", ""); acctMsg(true, "この端末への通知をやめました。"); });
+  }
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.act === "ntf" && /^\d{2}:\d{2}$/.test(el.value)) { notifyCfg().time = el.value; commit(); }
+  if (el.id === "importFile" && el.files && el.files[0]) {
+    el.files[0].text().then(txt => {
+      let obj = null; try { obj = JSON.parse(txt); } catch(err) {}
+      if (!obj || typeof obj !== "object" || !obj.progress || !obj.settings) { ui.dataMsg = {ok:false, text:"このファイルは読み込めません。旧アプリの「データを書き出す（JSON）」で保存したファイルを選んでね。"}; render(); return; }
+      state = normalize(obj); commit(); checkLevel(true);
+      ui.dataMsg = {ok:true, text:"データを読み込みました。予定・進捗・学習記録が反映されています。"}; render();
+      cheer("おかえり！今までの記録もちゃんと引っ越してきたよ。", true);
+    });
+    el.value = "";
+  }
+});
+
+function viewSettings(){
+  const S = state.settings;
+  return `${viewAccount()}${viewBulk()}${viewCal()}
+    <section class="panel px">
+      <div class="head"><h2>スマホで開く</h2><span class="small muted">同じGoogleアカウントでログイン</span></div>
+      <div class="qrwrap">
+        <div class="qr" id="qr"></div>
+        <ol class="qrsteps">
+          <li>スマホのカメラでQRコードを読み取る</li>
+          <li>設定タブで<b>このPCと同じGoogleアカウント</b>でログイン</li>
+          <li>Chromeのメニューから「アプリをインストール」（ホーム画面にボルコのアイコン）</li>
+          <li>進捗・予定・学習記録は自動で同期されます</li>
+        </ol>
+      </div>
+      <div class="qrurl"><input type="text" id="appUrl" value="${APP_URL}" readonly aria-label="このアプリのURL"><button class="btn tiny" data-act="copyurl">コピー</button></div>
+    </section>
+    <section class="panel px">
+      <div class="head"><h2>試験と受講期間</h2></div>
+      <div class="sgrid">
+        <label class="f">試験日（受験予定）<input type="date" id="set-exam" data-act="set" data-k="examDate" value="${S.examDate}"></label>
+        <label class="f">在籍期限（受講証）<input type="date" id="set-deadline" data-act="set" data-k="deadline" value="${S.deadline}"></label>
+        <label class="f">週の目標（時間）<input type="number" id="set-goal" data-act="set" data-k="weeklyGoal" min="0" max="80" step="0.5" value="${S.weeklyGoal}"></label>
+      </div>
+      <label class="f" style="margin-top:10px">TAC Biz School のURL<input type="url" id="set-tac" data-act="set" data-k="tacTop" value="${esc(S.tacTop)}" placeholder="https://…"></label>
+    </section>
+    <section class="panel px">
+      <div class="head"><h2>科目ごとの期間</h2><span class="small muted">個別に調整したいとき</span></div>
+      <p class="small muted" style="margin:0">科目ごとに期間を変えて「自動作成」を押すと、その科目だけ予定を作り直します。修了済みの単元・節は変えません。</p>
+      ${SUBJECTS.map(s=>{const c=S.subjects[s.key]; return `<div class="ssub" style="--sc:${s.color}">
+        <div class="nm"><span>■ ${s.name}</span><button class="btn tiny ${ui.armed===s.key?"armed":""}" data-act="auto" data-s="${s.key}">${ui.armed===s.key?"上書きする":"自動作成"}</button></div>
+        <label class="f">開始日<input type="date" id="ss-${s.key}-start" data-act="sset" data-s="${s.key}" data-k="start" value="${c.start}"></label>
+        <label class="f">実力テスト目標日<input type="date" id="ss-${s.key}-end" data-act="sset" data-s="${s.key}" data-k="end" value="${c.end}"></label>
+        <label class="f url">TACのコースURL<input type="url" id="ss-${s.key}-url" data-act="sset" data-s="${s.key}" data-k="url" value="${esc(c.url)}" placeholder="https://…"></label>
+      </div>`;}).join("")}
+    </section>
+    <section class="panel px">
+      <div class="head"><h2>そのほか</h2></div>
+      <div class="chips"><button class="chip" data-act="sound" aria-pressed="${ui.sound}">効果音 ${ui.sound?"ON":"OFF"}</button></div>
+      <p class="small muted" style="margin:10px 0">記録はあなたのGoogleアカウント専用の場所に保存され、ほかの人には見えません。ログインしていないときはこの端末だけに保存されます。</p>
+      <div class="chips" style="margin-bottom:10px"><button class="btn tiny" data-act="exportjson">データを書き出す（JSON）</button>${DATA_IMPORT_UI}</div>
+      ${ui.dataMsg?`<p class="plmsg ${ui.dataMsg.ok?"ok":"bad"}">${esc(ui.dataMsg.text)}</p>${ui.dataMsg.raw?`<textarea readonly rows="4" style="width:100%;font-size:.7rem">${esc(ui.dataMsg.raw)}</textarea>`:""}`:""}
+      <button class="btn tiny ${ui.armed==="reset"?"armed":"light"}" data-act="reset">${ui.armed==="reset"?"もう一度押すと全部消去":"進捗と記録をすべて消去"}</button>
+    </section>`;
+}
+
+/* ================= 操作 ================= */
+let toastT;
+function toast(msg){ const el = document.getElementById("toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove("on"), 2200); }
+let armT;
+function arm(k){ ui.armed = k; clearTimeout(armT); armT = setTimeout(()=>{ ui.armed=null; render(); }, 8000); render(); }
+function goTab(k){ ui.tab = k; ui.armed = null; lsSet("denken.tab", k); render(); if (window.innerWidth < 920) document.getElementById("view").scrollIntoView({block:"start"}); }
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b || b.tagName === "INPUT") return;
+  const a = b.dataset.act, s = b.dataset.s, c = b.dataset.c, k = b.dataset.k;
+  if (a === "tab") { goTab(k); return; }
+  if (a === "open") { ui.subj = s; lsSet("denken.subj", s); if (c !== undefined && c !== "") ui.open[`${s}-${chCode(+c)}`] = true; goTab("units");
+    if (c !== undefined && c !== "") { const el = document.querySelector(`details[data-k="${s}-${chCode(+c)}"]`); if (el) el.closest(".chap").scrollIntoView({block:"start"}); } return; }
+  if (a === "sec") {
+    const i = +c.slice(2)-1, ch = state.progress[s].ch[c], sp = ch.sec[secCode(+k)], f = b.dataset.f;
+    sp[f] = !sp[f];
+    const big = syncChapter(s, i), t = secsOf(s,i)[+k].t;
+    commit();
+    if (big) cheer(`${SUBJ[s].name} ${c}「${SUBJ[s].ch[i][0]}」クリア！ +30ボルト`, true);
+    else if (sp[f]) cheer(f === "b" ? pick([`「${t}」読んだね！次は対応する問題集！ +5`, `教科書クリア！計算は紙に書いて確かめてね。 +5`]) : pick([`「${t}」の問題もクリア！ +5`, `問題集おつかれさま！間違えた問題はメモしておこう。 +5`]));
+    return;
+  }
+  if (a === "gobulk") { goTab("settings"); const el = document.getElementById("bulk"); if (el) el.scrollIntoView({block:"start"}); return; }
+  if (a === "plmode") { planCfg().mode = k; ui.armed = null; render(); return; }
+  if (a === "plsub") { const P = planCfg(); P.subs[k] = !P.subs[k]; ui.armed = null; render(); return; }
+  if (a === "plgoal") { planCfg().goal = k; ui.armed = null; render(); return; }
+  if (a === "calsave") {
+    const r = calendarCsv(); if (!r.count) return;
+    const name = `denken-${today()}.csv`;
+    const fallback = why => { ui.calText = r.csv; ui.calMsg = {ok:false, text:why}; render(); };
+    saveFile(name, r.csv).then(res => {
+      if (res === "saved") { ui.calText = null; ui.calMsg = {ok:true, text:`${name}（${r.count}日分）を保存しました。下の手順でGoogleカレンダーに取り込んでね。`}; render(); say("カレンダーに入れておけば、勉強の時間にお知らせが届くよ！", 6000); }
+      else if (res === "declined") { ui.calMsg = {ok:false, text:"保存をキャンセルしました"}; render(); }
+      else fallback("ファイルを保存できませんでした。下の内容をコピーしてください。");
+    });
+    return;
+  }
+  if (a === "exportjson") {
+    const name = `denken-data-${today()}.json`, text = JSON.stringify(state, null, 1);
+    saveFile(name, text).then(res => {
+      ui.dataMsg = res === "saved" ? {ok:true, text:`${name} を保存しました。新しいアプリの設定タブ「データの読み込み」で選んでください。`}
+        : res === "declined" ? {ok:false, text:"保存をキャンセルしました"} : {ok:false, text:"保存できませんでした。下の内容をコピーして .json ファイルにしてください。", raw:text};
+      render(); });
+    return;
+  }
+  if (a === "bulkcancel") { ui.armed = null; render(); return; }
+  if (a === "bulk" || a === "bulkgo") {
+    const hasPlan = SUBJECTS.some(x => Object.values(state.progress[x.key].ch).some(c => c.plan || Object.values(c.sec||{}).some(y => y.plan)));
+    if (a === "bulk" && hasPlan) { clearTimeout(armT); ui.armed = "bulk"; ui.bulkMsg = null; render();
+      const el = document.getElementById("plconfirm"); if (el) el.scrollIntoView({block:"center", behavior:"smooth"}); return; }
+    ui.armed = null; const r = bulkPlan();
+    if (r) {
+      const text = `${md(today())} に作成しました：${r.subs.map(s=>{const c=state.settings.subjects[s.key]; return `${s.name} ${md(c.start)}〜${md(c.end)}`;}).join("、")}`;
+      ui.bulkMsg = {ok:true, text}; planCfg().last = text;
+      commit();
+      cheer(`${r.subs.map(s=>s.name).join("・")}の予定を作ったよ！${md(r.end)}までに全部終わる計画だよ。`, true);
+      toast("予定を作成しました");
+    } else render();
+    const m = document.getElementById("plmsg"); if (m) m.scrollIntoView({block:"center", behavior:"smooth"});
+    return;
+  }
+  if (a === "tocedit") { ui.editToc = k || null; render(); return; }
+  if (a === "tocsave") {
+    const i = +c.slice(2)-1, ta = document.getElementById(`toc-${s}-${c}`);
+    const list = ta.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(0,40).map(l => {
+      const m = l.split(/\s*[|｜]\s*/); return {t: m[0].replace(/^(SEC(TION)?\s*)?\d{1,2}[\s.．:：]+/i,"").slice(0,80) || m[0].slice(0,80), p: (m[1]||"").replace(/^p\.?\s*/i,"").slice(0,20)}; });
+    if (!list.length) { toast("節を1つ以上入れてね"); return; }
+    state.toc[s] ??= {}; state.toc[s][c] = list;
+    const ch = state.progress[s].ch[c];
+    list.forEach((_,j) => { ch.sec[secCode(j)] ??= {b:false,q:false,plan:""}; });
+    Object.keys(ch.sec).forEach(k2 => { if (+k2 > list.length) delete ch.sec[k2]; });
+    syncChapter(s, i); ui.editToc = null; commit(); toast("目次を保存しました"); return;
+  }
+  if (a === "tocreset") {
+    const i = +c.slice(2)-1; if (state.toc[s]) delete state.toc[s][c];
+    const ch = state.progress[s].ch[c], n = SUBJ[s].ch[i][2].length;
+    for (let j=0;j<n;j++) ch.sec[secCode(j)] ??= {b:false,q:false,plan:""};
+    Object.keys(ch.sec).forEach(k2 => { if (+k2 > n) delete ch.sec[k2]; });
+    syncChapter(s, i); ui.editToc = null; commit(); toast("第3版の目次に戻しました"); return;
+  }
+  if (a === "subj") { ui.subj = k; lsSet("denken.subj", k); render(); return; }
+  if (a === "logsub") { ui.logSub = k; render(); return; }
+  if (a === "logmin") { ui.logMin = +k; render(); return; }
+  if (a === "step") {
+    const i = +c.slice(2)-1, ch = state.progress[s].ch[c], on = !ch.s[+k]; ch.s[+k] = on;
+    const name = SUBJ[s].ch[i][0];
+    if (+k === 0 || +k === 2) { const f = +k === 0 ? "b" : "q"; secsOf(s,i).forEach((_,j) => { ch.sec[secCode(j)][f] = on; }); }
+    const big = syncChapter(s, i);
+    commit();
+    if (big) cheer(`${SUBJ[s].name} ${c}「${name}」クリア！ +40ボルト`, true);
+    else if (on) cheer(pick([`${STEPS[+k]}おわり！ +10ボルト`, `いいね！「${name}」の${STEPS[+k]}クリア！`, `その調子！次は${STEPS[+k+1]||"修了"}だね。`]));
+    return;
+  }
+  if (a === "u") { const ch = state.progress[s].ch[c]; ch.u = ch.u === +k ? 0 : +k; commit();
+    if (ch.u===1) say("苦手マークしたよ。テキストに戻って、あとで一緒に復習しよう！", 5000); else if (ch.u===3) cheer("得意になったんだね！すごい！"); return; }
+  if (a === "auto") { if (ui.armed !== s) { arm(s); return; } ui.armed = null;
+    if (autoPlan(s)) { commit(); say(`${SUBJ[s].name}の予定を作ったよ。いっしょにがんばろう！`, 5000); } else render(); return; }
+  if (a === "autoall") { if (ui.armed !== "all") { arm("all"); return; } ui.armed = null;
+    let ok = 0; SUBJECTS.forEach(x => { if (autoPlan(x.key)) ok++; });
+    if (ok) { commit(); cheer(`${ok}科目の予定を作ったよ！まずはホームのクエストから。`); } else render(); return; }
+  if (a === "seq") {
+    const S = state.settings, st = S.subjects.riron.start || today(), end = S.examDate || S.deadline;
+    if (!end || end <= st) { toast("先に試験日か在籍期限を入れてね"); return; }
+    const span = diffDays(st, end), w = SUBJECTS.map(x=>x.ch.reduce((a,c)=>a+c[1],0)), tw = w.reduce((a,b)=>a+b,0);
+    let acc = 0, prev = st;
+    SUBJECTS.forEach((x,i) => { acc += w[i]; const e2 = addDays(st, Math.round(span*acc/tw) - (i===3?7:0)); S.subjects[x.key].start = prev; S.subjects[x.key].end = e2; prev = addDays(e2,1); });
+    commit(); say("4科目の期間を割り振ったよ。次は「全科目の予定を自動作成」を押してね。", 6000); return;
+  }
+  if (a === "dellog") { if (ui.armed !== "log-"+k) { arm("log-"+k); return; } ui.armed = null; state.logs = state.logs.filter(l => l.id !== k); toast("記録を削除しました"); commit(); return; }
+  if (a === "reset") { if (ui.armed !== "reset") { arm("reset"); return; } ui.armed = null; const keep = state.settings; state = defaultState(); state.settings = keep; state = normalize(state); lsSet("denken.lv","1"); toast("進捗と記録を消去しました"); commit(); return; }
+  // タイマー
+  if (a === "tsub") { timer.sub = k; saveTimer(); render(); return; }
+  if (a === "tdur") { timer.dur = +k; timer.remain = timer.dur*60000; saveTimer(); render(); return; }
+  if (a === "tstart") { ac(); timer.endAt = Date.now() + timer.remain; timer.running = true; saveTimer(); sfx("blip"); render(); say(pick(["よーし、いっしょに集中しよう！","スマホは置いて、紙とペンを用意してね。","計算問題は手を動かして解こう！"]), 5000); return; }
+  if (a === "tpause") { timer.remain = tLeft(); timer.running = false; saveTimer(); render(); return; }
+  if (a === "treset") { timer.running = false; timer.remain = timer.dur*60000; saveTimer(); render(); return; }
+  if (a === "tsave") { const m = Math.floor((timer.dur*60000 - tLeft())/60000); if (m>=1) { addLog(timer.sub, m, "集中タイマー（途中まで）"); timer.running=false; timer.remain = timer.dur*60000; saveTimer(); commit(); cheer(`${m}分ぶん記録したよ。おつかれさま！`); } return; }
+  if (a === "copyurl") {
+    const inp = document.getElementById("appUrl");
+    const fallback = () => { inp.focus(); inp.select(); toast("選択しました。長押しかCtrl+Cでコピーしてね"); };
+    try { navigator.clipboard.writeText(APP_URL).then(() => toast("URLをコピーしました"), fallback); } catch(err) { fallback(); }
+    return;
+  }
+  if (a === "rain") { setRain(!fx.rain); render(); return; }
+  if (a === "sound") { ui.sound = !ui.sound; lsSet("denken.sound", ui.sound ? "on" : "off"); if (ui.sound) sfx("blip"); render(); return; }
+});
+
+document.addEventListener("change", e => {
+  const el = e.target, a = el.dataset && el.dataset.act; if (!a) return;
+  const s = el.dataset.s, c = el.dataset.c, k = el.dataset.k, v = el.value;
+  let reaction = null;
+  if (a === "plan") state.progress[s].ch[c].plan = v;
+  else if (a === "done") { const ch = state.progress[s].ch[c]; const was = ch.done; ch.done = v; if (v) { ch.s = ch.s.map(()=>true); Object.values(ch.sec).forEach(x => { x.b = true; x.q = true; }); if (!was) reaction = `${SUBJ[s].name} ${c} クリア！`; } }
+  else if (a === "memo") state.progress[s].ch[c].memo = v.slice(0,200);
+  else if (a === "mt") state.progress[s].ch[c].mt = v.slice(0,60);
+  else if (a === "cal") { const C = calCfg(); if (k === "time") { if (/^\d{2}:\d{2}$/.test(v)) C.time = v; } else C.dur = Math.max(10, Math.min(240, +v || 60)); ui.calMsg = null; ui.calText = null; }
+  else if (a === "pl") { const P = planCfg(); P[k] = k === "buffer" ? Math.max(0, Math.min(120, +v || 0)) : v; ui.armed = null; }
+  else if (a === "secplan") { const sp = state.progress[s].ch[c].sec[secCode(+k)]; if (sp) sp.plan = v; }
+  else if (a === "tplan") state.progress[s].test.plan = v;
+  else if (a === "tdone") { const was = state.progress[s].test.done; state.progress[s].test.done = v; if (v && !was) reaction = `${SUBJ[s].name}の実力テスト提出！トロフィーゲット！ +150ボルト`; }
+  else if (a === "tscore") state.progress[s].test.score = v;
+  else if (a === "set") state.settings[k] = k === "weeklyGoal" ? Math.max(0, +v || 0) : v.trim();
+  else if (a === "sset") state.settings.subjects[s][k] = v.trim();
+  else return;
+  if ((a === "set" && k === "tacTop") || (a === "sset" && k === "url")) { if (v.trim() && !safeUrl(v.trim())) toast("https:// で始まるURLを入れてね"); }
+  commit();
+  if (reaction) cheer(reaction, true);
+});
+
+document.addEventListener("submit", e => {
+  if (e.target.id !== "logForm") return;
+  e.preventDefault();
+  const d = document.getElementById("logDate").value || today();
+  const min = Math.round(+document.getElementById("logMinInput").value || ui.logMin);
+  if (!(min > 0 && min <= 1440)) { toast("1〜1440分で入れてね"); return; }
+  addLog(ui.logSub, min, document.getElementById("logMemo").value.trim(), d);
+  commit();
+  cheer(min >= 90 ? `${hm(min)}も！？がんばったね！ +${Math.floor(min/3)}ボルト` : `${(SUBJ[ui.logSub]||{name:"勉強"}).name} ${hm(min)}、記録したよ！ +${Math.floor(min/3)}ボルト`, min >= 90);
+});
+document.addEventListener("input", e => { if (e.target.id === "logMinInput") { const m = +e.target.value; if (m>0) ui.logMin = m; } });
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+initStore();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+name: 毎日の通知
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # 30分ごと（日本時間の設定時刻を過ぎたら1日1回送る）
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "時刻に関係なく今すぐ送る（テスト用）"
+        type: boolean
+        default: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-audit --no-fund firebase-admin@12.7.0
+      - run: node scripts/notify.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FORCE: ${{ inputs.force }}
