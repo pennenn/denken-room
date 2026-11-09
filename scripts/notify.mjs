@@ -10,9 +10,28 @@ const TOC = require("../toc.js");
 const FORCE = process.env.FORCE === "true";
 const WINDOW_MIN = 180; // 設定時刻から3時間以内なら送る（Actions の遅れ対策）
 
+// 失敗したときは原因と対処を GitHub の画面（Annotations）に出す
+function fail(title, msg) {
+  console.log(`::error title=${title}::${String(msg).replace(/\r?\n/g, " ").slice(0, 900)}`);
+  process.exit(1);
+}
+const onError = e => {
+  const m = String((e && (e.message || e.code)) || e);
+  if (/NOT_FOUND/.test(m)) fail("Firestore のデータベースが見つかりません", "Firebase コンソールで Firestore Database を作成してください（デフォルトのデータベース）。 " + m);
+  if (/PERMISSION_DENIED|UNAUTHENTICATED|invalid_grant/i.test(m)) fail("秘密鍵が使えません", "FIREBASE_SERVICE_ACCOUNT の鍵が正しくないか、別プロジェクトの鍵です。Firebase で新しい秘密鍵を作り、Secret を登録し直してください。 " + m);
+  if (/messaging|fcm|SenderId|mismatched-credential/i.test(m)) fail("通知の送信に失敗しました", m);
+  fail("通知スクリプトのエラー", m);
+};
+process.on("unhandledRejection", onError);
+process.on("uncaughtException", onError);
+
 const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
-if (!sa) { console.error("FIREBASE_SERVICE_ACCOUNT が設定されていません"); process.exit(1); }
-initializeApp({ credential: cert(JSON.parse(sa)) });
+if (!sa) fail("秘密鍵が未登録です", "GitHub の Settings → Secrets and variables → Actions に FIREBASE_SERVICE_ACCOUNT を登録してください。");
+let saJson;
+try { saJson = JSON.parse(sa); } catch (e) { fail("秘密鍵の形式が正しくありません", "FIREBASE_SERVICE_ACCOUNT には、ダウンロードした JSON ファイルの中身を { から } まで全部貼り付けてください。"); }
+if (saJson.project_id !== "denken-room-d1ed7") console.log(`::warning title=プロジェクトが違う可能性::秘密鍵のプロジェクトは ${saJson.project_id} です（アプリは denken-room-d1ed7）`);
+console.log(`秘密鍵のプロジェクト: ${saJson.project_id}`);
+initializeApp({ credential: cert(saJson) });
 const db = getFirestore();
 const messaging = getMessaging();
 
